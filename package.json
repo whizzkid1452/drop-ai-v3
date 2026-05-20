@@ -1,0 +1,32 @@
+{
+  "name": "drop-ai-v3",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "volta": {
+    "node": "22.11.0",
+    "pnpm": "9.12.2"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "test": "pnpm test:unit",
+    "test:unit": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "tone": "^15.1.22",
+    "zod": "^4.2.1",
+    "zustand": "^5.0.9"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "jsdom": "^26.1.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.1.2",
+    "vitest": "^4.0.18"
+  }
+}
