@@ -95,6 +95,7 @@ export class FakeAudioProvider implements AudioProvider {
   }
 
   async getAssetDuration(assetId: string): Promise<number> {
+    this.record('getAssetDuration', [assetId]);
     return this.assetDurations[assetId] ?? DEFAULT_ASSET_DURATION_SECONDS;
   }
 

@@ -24,6 +24,12 @@ function collectSourceFiles(rootDir: string): ScannedFile[] {
     if (!absolutePath.endsWith('.ts') && !absolutePath.endsWith('.tsx')) {
       continue;
     }
+    if (
+      absolutePath.endsWith('.test.ts') ||
+      absolutePath.endsWith('.test.tsx')
+    ) {
+      continue;
+    }
     collected.push({
       absolutePath,
       relativePath: path.relative(LAYERS_DIR, absolutePath),
