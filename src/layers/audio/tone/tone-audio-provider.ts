@@ -5,6 +5,7 @@ import type {
   AudioProvider,
   LoopRange,
 } from '../audio-provider';
+import { encodeWav } from '../wav-encoder';
 
 interface RegisteredBuffer {
   duration: number;
@@ -170,10 +171,46 @@ export class ToneAudioProvider implements AudioProvider {
   }
 
   async exportSession(
-    _durationSeconds: number,
-    _session: SessionState
+    durationSeconds: number,
+    session: SessionState
   ): Promise<Blob> {
-    throw new Error('ToneAudioProvider.exportSession not implemented yet.');
+    const currentBpm = Tone.getTransport().bpm.value;
+    const buffers = this.buffers;
+
+    const offlineBuffer = await Tone.Offline(({ transport }) => {
+      transport.bpm.value = currentBpm;
+
+      for (const trackId of session.trackOrder) {
+        const track = session.tracksById[trackId];
+        const channel = new Tone.Channel().toDestination();
+        channel.volume.value = unitToDb(track.volume);
+        channel.mute = track.muted;
+        channel.solo = track.soloed;
+        channel.pan.value = track.pan;
+
+        for (const regionId of track.regionOrder) {
+          const region = track.regionsById[regionId];
+          const buffer = buffers.get(region.assetId);
+          if (!buffer) {
+            throw new Error(
+              `Asset buffer not registered for export: ${region.assetId}`
+            );
+          }
+          const player = new Tone.Player(
+            buffer as Tone.ToneAudioBuffer
+          ).connect(channel);
+          player.sync().start(region.startTime, region.offset, region.duration);
+        }
+      }
+
+      transport.start();
+    }, durationSeconds);
+
+    const audioBuffer = offlineBuffer.get();
+    if (!audioBuffer) {
+      throw new Error('Failed to render offline buffer.');
+    }
+    return encodeWav(audioBuffer);
   }
 
   async syncSession(session: SessionState): Promise<void> {

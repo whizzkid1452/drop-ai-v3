@@ -19,6 +19,20 @@ interface PlayerMock {
   dispose: ReturnType<typeof vi.fn>;
 }
 
+interface OfflineTransportMock {
+  bpm: { value: number };
+  start: ReturnType<typeof vi.fn>;
+}
+
+interface OfflineRunRecord {
+  duration: number;
+  transport: OfflineTransportMock;
+  channelInstancesAtStart: number;
+  playerInstancesAtStart: number;
+  channelInstancesAfter: ChannelMock[];
+  playerInstancesAfter: PlayerMock[];
+}
+
 const toneState = {
   transport: {
     start: vi.fn(),
@@ -34,6 +48,8 @@ const toneState = {
   destination: { volume: { value: 0 } },
   channelInstances: [] as ChannelMock[],
   playerInstances: [] as PlayerMock[],
+  offlineCalls: [] as OfflineRunRecord[],
+  offlineSampleRate: 44100,
 };
 
 function makeChannel(): ChannelMock {
@@ -79,12 +95,54 @@ class MockPlayerCtor {
   }
 }
 
+async function offlineMock(
+  callback: (ctx: { transport: OfflineTransportMock }) => unknown,
+  duration: number
+) {
+  const transport: OfflineTransportMock = {
+    bpm: { value: 0 },
+    start: vi.fn(),
+  };
+  const channelInstancesAtStart = toneState.channelInstances.length;
+  const playerInstancesAtStart = toneState.playerInstances.length;
+  await callback({ transport });
+  const sampleCount = Math.max(1, Math.floor(duration * toneState.offlineSampleRate));
+  const buffer = createMockAudioBuffer(2, sampleCount, toneState.offlineSampleRate);
+  toneState.offlineCalls.push({
+    duration,
+    transport,
+    channelInstancesAtStart,
+    playerInstancesAtStart,
+    channelInstancesAfter: toneState.channelInstances.slice(channelInstancesAtStart),
+    playerInstancesAfter: toneState.playerInstances.slice(playerInstancesAtStart),
+  });
+  return { get: () => buffer };
+}
+
+function createMockAudioBuffer(
+  channels: number,
+  samples: number,
+  sampleRate: number
+): AudioBuffer {
+  const data: Float32Array[] = [];
+  for (let c = 0; c < channels; c += 1) {
+    data.push(new Float32Array(samples));
+  }
+  return {
+    numberOfChannels: channels,
+    sampleRate,
+    length: samples,
+    getChannelData: (ch: number) => data[ch],
+  } as unknown as AudioBuffer;
+}
+
 vi.mock('tone', () => ({
   getTransport: () => toneState.transport,
   getDestination: () => toneState.destination,
   Channel: MockChannelCtor,
   Player: MockPlayerCtor,
   ToneAudioBuffer: class {},
+  Offline: offlineMock,
 }));
 
 beforeEach(() => {
@@ -100,6 +158,7 @@ beforeEach(() => {
   toneState.destination.volume.value = 0;
   toneState.channelInstances.length = 0;
   toneState.playerInstances.length = 0;
+  toneState.offlineCalls.length = 0;
 });
 
 describe('ToneAudioProvider transport', () => {
@@ -497,5 +556,105 @@ describe('ToneAudioProvider.syncSession', () => {
     for (const channel of firstChannels) {
       expect(channel.dispose).toHaveBeenCalled();
     }
+  });
+});
+
+describe('ToneAudioProvider.exportSession', () => {
+  async function makeProviderWithBuffers() {
+    const { ToneAudioProvider } = await import('./tone-audio-provider');
+    const provider = new ToneAudioProvider();
+    provider.registerBuffer('asset-1', { duration: 4 });
+    return provider;
+  }
+
+  function snapshotForExport() {
+    return {
+      id: 'session-1',
+      trackOrder: ['track-1'],
+      tracksById: {
+        'track-1': {
+          id: 'track-1',
+          name: 'A',
+          volume: 0.5,
+          muted: false,
+          soloed: false,
+          pan: 0.2,
+          regionOrder: ['region-1'],
+          regionsById: {
+            'region-1': {
+              id: 'region-1',
+              assetId: 'asset-1',
+              startTime: 0,
+              duration: 2,
+              offset: 0,
+            },
+          },
+        },
+      },
+      playback: {
+        playing: false,
+        positionSeconds: 0,
+        bpm: 130,
+        masterVolume: 1,
+        loop: { start: 0, end: 4, enabled: false },
+      },
+      dirty: false,
+      updatedAt: '2026-05-23T00:00:00.000Z',
+    };
+  }
+
+  it('returns a Blob with audio/wav mime type', async () => {
+    const provider = await makeProviderWithBuffers();
+
+    const blob = await provider.exportSession(2, snapshotForExport());
+
+    expect(blob.type).toBe('audio/wav');
+    expect(blob.size).toBeGreaterThan(44);
+  });
+
+  it('calls Tone.Offline with the requested duration', async () => {
+    const provider = await makeProviderWithBuffers();
+
+    await provider.exportSession(2.5, snapshotForExport());
+
+    expect(toneState.offlineCalls).toHaveLength(1);
+    expect(toneState.offlineCalls[0].duration).toBe(2.5);
+  });
+
+  it('copies current transport bpm to the offline transport', async () => {
+    const provider = await makeProviderWithBuffers();
+    toneState.transport.bpm.value = 96;
+
+    await provider.exportSession(1, snapshotForExport());
+
+    expect(toneState.offlineCalls[0].transport.bpm.value).toBe(96);
+  });
+
+  it('rebuilds tracks and regions inside the offline context', async () => {
+    const provider = await makeProviderWithBuffers();
+
+    await provider.exportSession(2, snapshotForExport());
+
+    const run = toneState.offlineCalls[0];
+    expect(run.channelInstancesAfter).toHaveLength(1);
+    expect(run.playerInstancesAfter).toHaveLength(1);
+    expect(run.playerInstancesAfter[0].start).toHaveBeenCalledWith(0, 0, 2);
+  });
+
+  it('starts the offline transport', async () => {
+    const provider = await makeProviderWithBuffers();
+
+    await provider.exportSession(1, snapshotForExport());
+
+    expect(toneState.offlineCalls[0].transport.start).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws when a region asset is not registered', async () => {
+    const { ToneAudioProvider } = await import('./tone-audio-provider');
+    const provider = new ToneAudioProvider();
+
+    await expect(
+      provider.exportSession(1, snapshotForExport())
+    ).rejects.toThrow(/asset/i);
   });
 });
