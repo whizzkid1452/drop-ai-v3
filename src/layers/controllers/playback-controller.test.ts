@@ -1,0 +1,118 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { PlaybackController } from './playback-controller';
+import { FakeAudioProvider } from '@/layers/audio/fake-audio-provider';
+import {
+  createSessionStore,
+  type SessionStore,
+} from '@/layers/core/session/session-store';
+import { createEmptySession } from '@/layers/core/session/session-state';
+import { createCallRecorder } from '@/layers/testing/call-recorder';
+
+const NOW = '2026-05-23T00:00:00.000Z';
+
+interface Harness {
+  store: SessionStore;
+  audio: FakeAudioProvider;
+  recorder: ReturnType<typeof createCallRecorder>;
+  controller: PlaybackController;
+}
+
+function setup(): Harness {
+  const store = createSessionStore({
+    initialSession: createEmptySession({ id: 'session-1', now: NOW }),
+  });
+  const recorder = createCallRecorder();
+  const audio = new FakeAudioProvider({ recorder });
+  const controller = new PlaybackController({
+    sessionStore: store,
+    audioProvider: audio,
+    now: () => NOW,
+  });
+  return { store, audio, recorder, controller };
+}
+
+describe('PlaybackController', () => {
+  let h: Harness;
+  beforeEach(() => {
+    h = setup();
+  });
+
+  it('handlePlay sets playback.playing true and calls audio.play', async () => {
+    await h.controller.handlePlay();
+
+    expect(h.store.getState().playback.playing).toBe(true);
+    expect(h.recorder.getCalls('play')).toHaveLength(1);
+  });
+
+  it('handlePause clears playing and calls audio.pause', async () => {
+    await h.controller.handlePlay();
+    h.recorder.reset();
+
+    h.controller.handlePause();
+
+    expect(h.store.getState().playback.playing).toBe(false);
+    expect(h.recorder.getCalls('pause')).toHaveLength(1);
+  });
+
+  it('handleStop sets playing false, position 0, and calls audio.stop', async () => {
+    await h.controller.handlePlay();
+    h.controller.handleSeek(5);
+    h.recorder.reset();
+
+    h.controller.handleStop();
+
+    const playback = h.store.getState().playback;
+    expect(playback.playing).toBe(false);
+    expect(playback.positionSeconds).toBe(0);
+    expect(h.recorder.getCalls('stop')).toHaveLength(1);
+  });
+
+  it('handleSeek updates session position and audio position', () => {
+    h.controller.handleSeek(3.5);
+
+    expect(h.store.getState().playback.positionSeconds).toBe(3.5);
+    expect(h.recorder.getCalls('seek')[0].args).toEqual([3.5]);
+  });
+
+  it('handleLoop updates session and audio', () => {
+    h.controller.handleLoop(1, 5, true);
+
+    expect(h.store.getState().playback.loop).toEqual({
+      start: 1,
+      end: 5,
+      enabled: true,
+    });
+    expect(h.recorder.getCalls('setLoop')[0].args).toEqual([
+      { start: 1, end: 5, enabled: true },
+    ]);
+  });
+
+  it('handleBpm updates session and audio', () => {
+    h.controller.handleBpm(140);
+
+    expect(h.store.getState().playback.bpm).toBe(140);
+    expect(h.recorder.getCalls('setBpm')[0].args).toEqual([140]);
+  });
+
+  it('handleMasterVolume updates session and audio', () => {
+    h.controller.handleMasterVolume(0.6);
+
+    expect(h.store.getState().playback.masterVolume).toBe(0.6);
+    expect(h.recorder.getCalls('setMasterVolume')[0].args).toEqual([0.6]);
+  });
+
+  it('handleSeek does NOT mark the session dirty', () => {
+    h.controller.handleSeek(2);
+    expect(h.store.getState().dirty).toBe(false);
+  });
+
+  it('handlePlay does NOT mark the session dirty', async () => {
+    await h.controller.handlePlay();
+    expect(h.store.getState().dirty).toBe(false);
+  });
+
+  it('handleBpm marks the session dirty (it is an edit)', () => {
+    h.controller.handleBpm(140);
+    expect(h.store.getState().dirty).toBe(true);
+  });
+});
