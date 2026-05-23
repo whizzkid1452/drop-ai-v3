@@ -15,6 +15,8 @@ import {
   type SessionStore,
 } from '@/layers/core/session/session-store';
 import { createEmptySession } from '@/layers/core/session/session-state';
+import { isIndexedDbAvailable } from '@/layers/storage/indexeddb/availability';
+import { IndexedDbSessionStorage } from '@/layers/storage/indexeddb/indexed-db-session-storage';
 import { MemorySessionStorage } from '@/layers/storage/memory-session-storage';
 import type { SessionStorageProvider } from '@/layers/storage/session-storage-provider';
 
@@ -25,6 +27,16 @@ export interface CreateAppOptions {
   now?: NowProvider;
   sessionId?: string;
   autosave?: { debounceMs: number };
+  indexedDbName?: string;
+}
+
+function resolveDefaultStorage(
+  indexedDbName: string | undefined
+): SessionStorageProvider {
+  if (isIndexedDbAvailable()) {
+    return new IndexedDbSessionStorage({ dbName: indexedDbName });
+  }
+  return new MemorySessionStorage();
 }
 
 export interface AppHandle {
@@ -40,7 +52,8 @@ const DEFAULT_SESSION_ID = 'session-1';
 
 export function createApp(options: CreateAppOptions = {}): AppHandle {
   const audioProvider = options.audioProvider ?? new FakeAudioProvider();
-  const storage = options.storage ?? new MemorySessionStorage();
+  const storage =
+    options.storage ?? resolveDefaultStorage(options.indexedDbName);
   const idGenerator = options.idGenerator ?? createUuidGenerator();
   const now = options.now ?? systemNowProvider;
   const sessionId = options.sessionId ?? DEFAULT_SESSION_ID;
