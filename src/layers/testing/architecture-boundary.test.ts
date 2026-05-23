@@ -195,8 +195,8 @@ describe('architecture boundary', () => {
       expect(offenders.map(file => file.relativePath)).toEqual([]);
     });
 
-    it('apps only import from layers/controllers or layers/testing', () => {
-      const allowedLayers = new Set(['controllers', 'testing']);
+    it('apps only import from layers/controllers, layers/composition, or layers/testing', () => {
+      const allowedLayers = new Set(['controllers', 'composition', 'testing']);
       const layerImportPattern =
         /(?:from|import)\s+['"](?:@\/layers|(?:\.\.?\/)+layers)\/([^/'"]+)/g;
       const offenders: string[] = [];
