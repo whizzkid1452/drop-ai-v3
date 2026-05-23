@@ -99,6 +99,14 @@ export class FakeAudioProvider implements AudioProvider {
     return this.assetDurations[assetId] ?? DEFAULT_ASSET_DURATION_SECONDS;
   }
 
+  async exportSession(
+    durationSeconds: number,
+    session: SessionState
+  ): Promise<Blob> {
+    this.record('exportSession', [durationSeconds, session.id]);
+    return new Blob([], { type: 'audio/wav' });
+  }
+
   async syncSession(session: SessionState): Promise<void> {
     this.record('syncSession', [session.id]);
     for (const trackId of session.trackOrder) {

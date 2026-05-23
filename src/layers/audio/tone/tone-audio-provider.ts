@@ -169,6 +169,13 @@ export class ToneAudioProvider implements AudioProvider {
     return buffer.duration;
   }
 
+  async exportSession(
+    _durationSeconds: number,
+    _session: SessionState
+  ): Promise<Blob> {
+    throw new Error('ToneAudioProvider.exportSession not implemented yet.');
+  }
+
   async syncSession(session: SessionState): Promise<void> {
     this.disposeAll();
 

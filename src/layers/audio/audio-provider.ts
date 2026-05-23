@@ -39,4 +39,5 @@ export interface AudioProvider {
 
   getAssetDuration(assetId: string): Promise<number>;
   syncSession(session: SessionState): Promise<void>;
+  exportSession(durationSeconds: number, session: SessionState): Promise<Blob>;
 }
