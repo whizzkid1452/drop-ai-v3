@@ -182,6 +182,37 @@ describe('command-controller integration: validation vs execution failure', () =
   });
 });
 
+describe('command-controller integration: session.export', () => {
+  it('returns a blob and filename when the session has at least one region', async () => {
+    const h = setup();
+    await h.app.executeCommand({ type: 'track.add' });
+    await h.app.executeCommand({
+      type: 'region.add',
+      payload: { trackId: 'track-1', assetId: 'asset-1', startTime: 0 },
+    });
+
+    const result = await h.app.executeCommand({ type: 'session.export' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const data = result.data as { blob: Blob; filename: string };
+      expect(data.blob).toBeInstanceOf(Blob);
+      expect(data.filename).toBe('session-1.wav');
+    }
+  });
+
+  it('returns COMMAND_EXECUTION_FAILED when the session is empty', async () => {
+    const h = setup();
+
+    const result = await h.app.executeCommand({ type: 'session.export' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe('COMMAND_EXECUTION_FAILED');
+    }
+  });
+});
+
 describe('command-controller integration: end-to-end save/restore', () => {
   it('persists tracks and regions through save and restores them into a fresh app', async () => {
     const h = setup();
