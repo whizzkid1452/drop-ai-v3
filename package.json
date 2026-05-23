@@ -15,7 +15,8 @@
     "test": "pnpm test:unit",
     "test:unit": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "repl": "tsx scripts/repl.ts"
   },
   "dependencies": {
     "tone": "^15.1.22",
@@ -26,6 +27,7 @@
     "@types/node": "^24.3.0",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^26.1.0",
+    "tsx": "^4.22.3",
     "typescript": "~5.8.3",
     "vite": "^7.1.2",
     "vitest": "^4.0.18"
