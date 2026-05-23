@@ -14,6 +14,17 @@ function createCounterIdGenerator(): IdGenerator {
   };
 }
 
+function isExportData(
+  data: unknown
+): data is { blob: Blob; filename: string } {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'blob' in data &&
+    'filename' in data
+  );
+}
+
 const HELP_TEXT = `
 Available commands:
   Transport:
@@ -110,10 +121,12 @@ async function main(): Promise<void> {
 
     const result = await runCli(input, { appController: app.controller });
     if (result.ok) {
-      console.log(
-        'OK',
-        result.data !== undefined ? JSON.stringify(result.data) : ''
-      );
+      const data = result.data;
+      if (isExportData(data)) {
+        console.log(`OK exported "${data.filename}" (${data.blob.size} bytes)`);
+      } else {
+        console.log('OK', data !== undefined ? JSON.stringify(data) : '');
+      }
     } else {
       console.log('ERR', result.error.code, '-', result.error.message);
     }
