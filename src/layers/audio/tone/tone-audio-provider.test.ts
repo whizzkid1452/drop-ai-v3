@@ -43,7 +43,7 @@ const toneState = {
     loopStart: 0,
     loopEnd: 0,
     loop: false,
-    state: 'stopped' as string,
+    state: 'stopped',
   },
   destination: { volume: { value: 0 } },
   channelInstances: [] as ChannelMock[],
