@@ -133,6 +133,36 @@ describe('architecture boundary', () => {
     });
   });
 
+  describe('controllers use AudioProvider interface only', () => {
+    const controllerFiles = ALL_SOURCE_FILES.filter(file =>
+      isInsideLayer(file.relativePath, 'controllers')
+    );
+
+    function importsAudioPath(content: string, audioSubpath: string): boolean {
+      const aliasPattern = new RegExp(
+        `(?:from|import)\\s+['"]@/layers/audio/${audioSubpath}(?:/[^'"]*)?['"]`
+      );
+      const relativePattern = new RegExp(
+        `(?:from|import)\\s+['"](?:\\.\\.?/)+layers/audio/${audioSubpath}(?:/[^'"]*)?['"]`
+      );
+      return aliasPattern.test(content) || relativePattern.test(content);
+    }
+
+    it('controllers do not import FakeAudioProvider', () => {
+      const offenders = controllerFiles.filter(file =>
+        importsAudioPath(file.content, 'fake-audio-provider')
+      );
+      expect(offenders.map(file => file.relativePath)).toEqual([]);
+    });
+
+    it('controllers do not import from layers/audio/tone', () => {
+      const offenders = controllerFiles.filter(file =>
+        importsAudioPath(file.content, 'tone')
+      );
+      expect(offenders.map(file => file.relativePath)).toEqual([]);
+    });
+  });
+
   describe('apps depend only on controllers and testing', () => {
     const appsFiles = ALL_SOURCE_FILES.filter(file =>
       isInsideLayer(file.relativePath, 'apps')
