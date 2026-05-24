@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createApp } from './create-app';
-import { FakeAudioProvider } from '@/layers/audio/fake-audio-provider';
+import { composeApp, createApp } from './create-app';
+import { FakeAudioEngine } from '@/layers/audio-engine/fake-audio-engine';
+import { createEmptySession } from '@/layers/session/session-state';
+import { createSessionStore } from '@/layers/session/session-store';
 import { createCallRecorder } from '@/layers/testing/call-recorder';
 
 function createIdGenerator() {
@@ -16,20 +18,23 @@ function createIdGenerator() {
 describe('createApp', () => {
   it('returns an AppController with controller surfaces wired', () => {
     const app = createApp({
-      audioProvider: new FakeAudioProvider(),
+      audioEngine: new FakeAudioEngine(),
       idGenerator: createIdGenerator(),
       sessionId: 'session-1',
     });
 
     expect(app.controller).toBeDefined();
     expect(app.controller.executeCommand).toBeInstanceOf(Function);
-    expect(app.sessionStore.getState().id).toBe('session-1');
+    expect(app.sessionReader.getState().id).toBe('session-1');
+    expect('audioEngine' in app).toBe(false);
+    expect('sessionStore' in app).toBe(false);
+    expect('applyOperation' in app.sessionReader).toBe(false);
   });
 
   it('routes track.add through the wired controllers', async () => {
     const recorder = createCallRecorder();
     const app = createApp({
-      audioProvider: new FakeAudioProvider({ recorder }),
+      audioEngine: new FakeAudioEngine({ recorder }),
       idGenerator: createIdGenerator(),
       sessionId: 'session-1',
     });
@@ -37,13 +42,13 @@ describe('createApp', () => {
     const result = await app.controller.executeCommand({ type: 'track.add' });
 
     expect(result.ok).toBe(true);
-    expect(app.sessionStore.getState().trackOrder).toEqual(['track-1']);
+    expect(app.sessionReader.getState().trackOrder).toEqual(['track-1']);
     expect(recorder.getCalls('createTrack').map((c) => c.args)).toEqual([
       ['track-1'],
     ]);
   });
 
-  it('uses FakeAudioProvider by default when none is provided', async () => {
+  it('uses FakeAudioEngine by default when none is provided', async () => {
     const app = createApp({
       idGenerator: createIdGenerator(),
       sessionId: 'session-1',
@@ -56,11 +61,29 @@ describe('createApp', () => {
 
   it('disposes cleanly', () => {
     const app = createApp({
-      audioProvider: new FakeAudioProvider(),
+      audioEngine: new FakeAudioEngine(),
       idGenerator: createIdGenerator(),
       sessionId: 'session-1',
     });
 
     expect(() => app.dispose()).not.toThrow();
+  });
+
+  it('composes already-created dependencies without exposing writable internals', async () => {
+    const sessionStore = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const recorder = createCallRecorder();
+    const app = composeApp({
+      sessionStore,
+      audioEngine: new FakeAudioEngine({ recorder }),
+      idGenerator: createIdGenerator(),
+    });
+
+    const result = await app.controller.executeCommand({ type: 'track.add' });
+
+    expect(result.ok).toBe(true);
+    expect(app.sessionReader.getState().trackOrder).toEqual(['track-1']);
+    expect(recorder.getCalls('createTrack')).toHaveLength(1);
   });
 });
