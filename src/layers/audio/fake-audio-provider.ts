@@ -106,25 +106,4 @@ export class FakeAudioProvider implements AudioProvider {
     this.record('exportSession', [durationSeconds, session.id]);
     return new Blob([], { type: 'audio/wav' });
   }
-
-  async syncSession(session: SessionState): Promise<void> {
-    this.record('syncSession', [session.id]);
-    for (const trackId of session.trackOrder) {
-      this.createTrack(trackId);
-    }
-    for (const trackId of session.trackOrder) {
-      const track = session.tracksById[trackId];
-      for (const regionId of track.regionOrder) {
-        const region = track.regionsById[regionId];
-        this.addRegion({
-          trackId,
-          regionId,
-          assetId: region.assetId,
-          startTime: region.startTime,
-          duration: region.duration,
-          offset: region.offset,
-        });
-      }
-    }
-  }
 }

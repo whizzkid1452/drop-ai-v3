@@ -38,6 +38,5 @@ export interface AudioProvider {
   resizeRegion(trackId: string, regionId: string, duration: number): void;
 
   getAssetDuration(assetId: string): Promise<number>;
-  syncSession(session: SessionState): Promise<void>;
   exportSession(durationSeconds: number, session: SessionState): Promise<Blob>;
 }

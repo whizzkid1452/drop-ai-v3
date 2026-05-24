@@ -211,40 +211,4 @@ export class ToneAudioProvider implements AudioProvider {
     }
     return encodeWav(audioBuffer);
   }
-
-  async syncSession(session: SessionState): Promise<void> {
-    this.disposeAll();
-
-    for (const trackId of session.trackOrder) {
-      const track = session.tracksById[trackId];
-      this.createTrack(trackId);
-      this.setTrackVolume(trackId, track.volume);
-      this.setTrackMute(trackId, track.muted);
-      this.setTrackSolo(trackId, track.soloed);
-      this.setTrackPan(trackId, track.pan);
-
-      for (const regionId of track.regionOrder) {
-        const region = track.regionsById[regionId];
-        this.addRegion({
-          trackId,
-          regionId,
-          assetId: region.assetId,
-          startTime: region.startTime,
-          duration: region.duration,
-          offset: region.offset,
-        });
-      }
-    }
-  }
-
-  private disposeAll(): void {
-    for (const region of this.regions.values()) {
-      region.player.dispose();
-    }
-    this.regions.clear();
-    for (const track of this.tracks.values()) {
-      track.channel.dispose();
-    }
-    this.tracks.clear();
-  }
 }
