@@ -6,19 +6,22 @@ export type SessionListener = (
   previousState: SessionState
 ) => void;
 
-export interface SessionStore {
+export interface ISessionReader {
   getState(): SessionState;
   subscribe(listener: SessionListener): () => void;
+}
+
+export interface ISessionStore extends ISessionReader {
   applyOperation(transform: (state: SessionState) => SessionState): void;
 }
 
-export interface CreateSessionStoreOptions {
+export interface ICreateSessionStoreOptions {
   initialSession: SessionState;
 }
 
 export function createSessionStore({
   initialSession,
-}: CreateSessionStoreOptions): SessionStore {
+}: ICreateSessionStoreOptions): ISessionStore {
   const store: StoreApi<SessionState> = createStore<SessionState>(
     () => initialSession
   );

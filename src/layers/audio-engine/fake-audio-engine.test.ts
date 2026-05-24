@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { FakeAudioProvider } from './fake-audio-provider';
+import { FakeAudioEngine } from './fake-audio-engine';
 import { createCallRecorder } from '@/layers/testing/call-recorder';
 
-describe('FakeAudioProvider', () => {
+describe('FakeAudioEngine', () => {
   it('records play, pause, stop calls in order', async () => {
     const recorder = createCallRecorder();
-    const provider = new FakeAudioProvider({ recorder });
+    const provider = new FakeAudioEngine({ recorder });
 
     await provider.play();
     provider.pause();
@@ -19,7 +19,7 @@ describe('FakeAudioProvider', () => {
   });
 
   it('returns the configured duration for a known asset', async () => {
-    const provider = new FakeAudioProvider({
+    const provider = new FakeAudioEngine({
       assetDurations: { 'asset-1': 4.5 },
     });
 
@@ -29,7 +29,7 @@ describe('FakeAudioProvider', () => {
   });
 
   it('defaults asset duration to 1 second when not configured', async () => {
-    const provider = new FakeAudioProvider();
+    const provider = new FakeAudioEngine();
 
     const duration = await provider.getAssetDuration('unknown-asset');
 
@@ -38,7 +38,7 @@ describe('FakeAudioProvider', () => {
 
   it('imports a file asset, records the call, and returns its duration', async () => {
     const recorder = createCallRecorder();
-    const provider = new FakeAudioProvider({
+    const provider = new FakeAudioEngine({
       recorder,
       assetDurations: { 'asset-1': 4.5 },
     });
@@ -56,7 +56,7 @@ describe('FakeAudioProvider', () => {
 
   it('records track mixer calls with arguments', () => {
     const recorder = createCallRecorder();
-    const provider = new FakeAudioProvider({ recorder });
+    const provider = new FakeAudioEngine({ recorder });
 
     provider.setTrackVolume('track-1', 0.5);
     provider.setTrackMute('track-1', true);

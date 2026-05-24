@@ -1,4 +1,4 @@
-import type { SessionState } from '@/layers/core/session/session-state';
+import type { SessionState } from '@/layers/session/session-state';
 
 export interface AddAudioRegionInput {
   trackId: string;
@@ -19,7 +19,7 @@ export interface LoopRange {
   enabled: boolean;
 }
 
-export interface AudioProvider {
+export interface IAudioEngine {
   play(): Promise<void>;
   pause(): void;
   stop(): void;

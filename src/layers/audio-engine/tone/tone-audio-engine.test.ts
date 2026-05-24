@@ -225,10 +225,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('ToneAudioProvider transport', () => {
+describe('ToneAudioEngine transport', () => {
   it('play starts Tone Transport when not already started', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
 
     await provider.play();
 
@@ -236,8 +236,8 @@ describe('ToneAudioProvider transport', () => {
   });
 
   it('play is a no-op when Tone Transport is already started', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
     toneState.transport.state = 'started';
 
     await provider.play();
@@ -246,8 +246,8 @@ describe('ToneAudioProvider transport', () => {
   });
 
   it('pause calls Tone Transport pause', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
 
     provider.pause();
 
@@ -255,8 +255,8 @@ describe('ToneAudioProvider transport', () => {
   });
 
   it('stop calls Tone Transport stop', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
 
     provider.stop();
 
@@ -264,8 +264,8 @@ describe('ToneAudioProvider transport', () => {
   });
 
   it('seek sets Tone Transport seconds', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
 
     provider.seek(3.5);
 
@@ -273,8 +273,8 @@ describe('ToneAudioProvider transport', () => {
   });
 
   it('setBpm sets Tone Transport bpm value', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
 
     provider.setBpm(140);
 
@@ -282,8 +282,8 @@ describe('ToneAudioProvider transport', () => {
   });
 
   it('setMasterVolume converts unit value to dB on the destination', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
 
     provider.setMasterVolume(1);
     expect(toneState.destination.volume.value).toBe(0);
@@ -296,8 +296,8 @@ describe('ToneAudioProvider transport', () => {
   });
 
   it('setLoop wires loopStart, loopEnd, and loop flag', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
 
     provider.setLoop({ start: 1, end: 5, enabled: true });
 
@@ -307,8 +307,8 @@ describe('ToneAudioProvider transport', () => {
   });
 
   it('setLoop with enabled false disables the loop flag', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
 
     provider.setLoop({ start: 1, end: 5, enabled: false });
 
@@ -316,10 +316,10 @@ describe('ToneAudioProvider transport', () => {
   });
 });
 
-describe('ToneAudioProvider track wiring', () => {
+describe('ToneAudioEngine track wiring', () => {
   it('createTrack registers a Tone.Channel connected to destination', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
 
     provider.createTrack('track-1');
 
@@ -330,8 +330,8 @@ describe('ToneAudioProvider track wiring', () => {
   });
 
   it('createTrack is idempotent for the same trackId', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
 
     provider.createTrack('track-1');
     provider.createTrack('track-1');
@@ -340,8 +340,8 @@ describe('ToneAudioProvider track wiring', () => {
   });
 
   it('setTrackVolume converts unit value to dB on the channel', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
     provider.createTrack('track-1');
 
     provider.setTrackVolume('track-1', 0.5);
@@ -350,8 +350,8 @@ describe('ToneAudioProvider track wiring', () => {
   });
 
   it('setTrackMute, setTrackSolo, and setTrackPan update the channel', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
     provider.createTrack('track-1');
     const channel = toneState.channelInstances[0];
 
@@ -365,8 +365,8 @@ describe('ToneAudioProvider track wiring', () => {
   });
 
   it('removeTrack disposes the channel', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
     provider.createTrack('track-1');
     const channel = toneState.channelInstances[0];
 
@@ -376,7 +376,7 @@ describe('ToneAudioProvider track wiring', () => {
   });
 });
 
-describe('ToneAudioProvider region wiring', () => {
+describe('ToneAudioEngine region wiring', () => {
   const ASSET_ID = 'asset-1';
   const REGION_INPUT = {
     trackId: 'track-1',
@@ -388,8 +388,8 @@ describe('ToneAudioProvider region wiring', () => {
   };
 
   it('getAssetDuration returns the duration of a registered buffer', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
     provider.registerBuffer(ASSET_ID, fakeToneBuffer(4.2));
 
     const duration = await provider.getAssetDuration(ASSET_ID);
@@ -398,8 +398,8 @@ describe('ToneAudioProvider region wiring', () => {
   });
 
   it('getAssetDuration throws for an unregistered asset', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
 
     await expect(provider.getAssetDuration('missing')).rejects.toThrow(
       /asset/i
@@ -407,12 +407,12 @@ describe('ToneAudioProvider region wiring', () => {
   });
 
   it('imports a File into a ToneAudioBuffer and registers it by assetId', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
     const createObjectURL = vi.fn(() => 'blob:asset-1');
     const revokeObjectURL = vi.fn();
     vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
     toneState.nextBufferDuration = 3.75;
-    const provider = new ToneAudioProvider();
+    const provider = new ToneAudioEngine();
     const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
 
     const result = await provider.importFileAsset('asset-file-1', file);
@@ -428,8 +428,8 @@ describe('ToneAudioProvider region wiring', () => {
   });
 
   it('addRegion creates a Player, connects it to the track channel, and syncs at startTime/offset/duration', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
     provider.registerBuffer(ASSET_ID, fakeToneBuffer(4));
     provider.createTrack('track-1');
     const channel = toneState.channelInstances[0];
@@ -445,16 +445,16 @@ describe('ToneAudioProvider region wiring', () => {
   });
 
   it('addRegion throws when the track does not exist', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
     provider.registerBuffer(ASSET_ID, fakeToneBuffer(4));
 
     expect(() => provider.addRegion(REGION_INPUT)).toThrow(/track/i);
   });
 
   it('moveRegion unsyncs, stops, and restarts at new startTime preserving offset and duration', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
     provider.registerBuffer(ASSET_ID, fakeToneBuffer(4));
     provider.createTrack('track-1');
     provider.addRegion(REGION_INPUT);
@@ -470,8 +470,8 @@ describe('ToneAudioProvider region wiring', () => {
   });
 
   it('resizeRegion restarts the player with the new duration', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
     provider.registerBuffer(ASSET_ID, fakeToneBuffer(4));
     provider.createTrack('track-1');
     provider.addRegion(REGION_INPUT);
@@ -484,8 +484,8 @@ describe('ToneAudioProvider region wiring', () => {
   });
 
   it('removeRegion disposes the player', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
     provider.registerBuffer(ASSET_ID, fakeToneBuffer(4));
     provider.createTrack('track-1');
     provider.addRegion(REGION_INPUT);
@@ -497,8 +497,8 @@ describe('ToneAudioProvider region wiring', () => {
   });
 
   it('removeTrack also disposes attached region players', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
     provider.registerBuffer(ASSET_ID, fakeToneBuffer(4));
     provider.createTrack('track-1');
     provider.addRegion(REGION_INPUT);
@@ -512,10 +512,10 @@ describe('ToneAudioProvider region wiring', () => {
   });
 });
 
-describe('ToneAudioProvider.exportSession', () => {
+describe('ToneAudioEngine.exportSession', () => {
   async function makeProviderWithBuffers() {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
     provider.registerBuffer('asset-1', fakeToneBuffer(4));
     return provider;
   }
@@ -601,8 +601,8 @@ describe('ToneAudioProvider.exportSession', () => {
   });
 
   it('throws when a region asset is not registered', async () => {
-    const { ToneAudioProvider } = await import('./tone-audio-provider');
-    const provider = new ToneAudioProvider();
+    const { ToneAudioEngine } = await import('./tone-audio-engine');
+    const provider = new ToneAudioEngine();
 
     await expect(
       provider.exportSession(1, snapshotForExport())

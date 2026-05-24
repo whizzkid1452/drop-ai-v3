@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { TrackController } from './track-controller';
 import type { IdGenerator } from './id-generator';
-import { FakeAudioProvider } from '@/layers/audio/fake-audio-provider';
+import { FakeAudioEngine } from '@/layers/audio-engine/fake-audio-engine';
 import {
   createSessionStore,
-  type SessionStore,
-} from '@/layers/core/session/session-store';
-import { createEmptySession } from '@/layers/core/session/session-state';
+  type ISessionStore,
+} from '@/layers/session/session-store';
+import { createEmptySession } from '@/layers/session/session-state';
 import { createCallRecorder } from '@/layers/testing/call-recorder';
 import {
   RegionNotFoundError,
   TrackNotFoundError,
-} from '@/layers/core/session/session-errors';
+} from '@/layers/session/session-errors';
 
 function fixedIdGenerator(): IdGenerator {
   let trackCounter = 0;
@@ -37,8 +37,8 @@ function fixedIdGenerator(): IdGenerator {
 }
 
 interface Harness {
-  store: SessionStore;
-  audio: FakeAudioProvider;
+  store: ISessionStore;
+  audio: FakeAudioEngine;
   recorder: ReturnType<typeof createCallRecorder>;
   controller: TrackController;
 }
@@ -48,13 +48,13 @@ function setup(): Harness {
     initialSession: createEmptySession({ id: 'session-1' }),
   });
   const recorder = createCallRecorder();
-  const audio = new FakeAudioProvider({
+  const audio = new FakeAudioEngine({
     recorder,
     assetDurations: { 'asset-1': 4, 'asset-2': 3 },
   });
   const controller = new TrackController({
     sessionStore: store,
-    audioProvider: audio,
+    audioEngine: audio,
     idGenerator: fixedIdGenerator(),
   });
   return { store, audio, recorder, controller };

@@ -1,24 +1,24 @@
 import type { CallRecorder } from '@/layers/testing/call-recorder';
-import type { SessionState } from '@/layers/core/session/session-state';
+import type { SessionState } from '@/layers/session/session-state';
 import type {
   AddAudioRegionInput,
-  AudioProvider,
+  IAudioEngine,
   ImportFileAssetResult,
   LoopRange,
-} from './audio-provider';
+} from './audio-engine';
 
 const DEFAULT_ASSET_DURATION_SECONDS = 1;
 
-export interface FakeAudioProviderOptions {
+export interface FakeAudioEngineOptions {
   recorder?: CallRecorder;
   assetDurations?: Record<string, number>;
 }
 
-export class FakeAudioProvider implements AudioProvider {
+export class FakeAudioEngine implements IAudioEngine {
   private readonly recorder: CallRecorder | undefined;
   private readonly assetDurations: Record<string, number>;
 
-  constructor(options: FakeAudioProviderOptions = {}) {
+  constructor(options: FakeAudioEngineOptions = {}) {
     this.recorder = options.recorder;
     this.assetDurations = options.assetDurations ?? {};
   }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { runCli } from './cli-runner';
 import { createApp } from '@/layers/composition/create-app';
-import { FakeAudioProvider } from '@/layers/audio/fake-audio-provider';
+import { FakeAudioEngine } from '@/layers/audio-engine/fake-audio-engine';
 
 function fixedIdGenerator() {
   const counters: Record<string, number> = {};
@@ -15,7 +15,7 @@ function fixedIdGenerator() {
 
 function setup() {
   return createApp({
-    audioProvider: new FakeAudioProvider({
+    audioEngine: new FakeAudioEngine({
       assetDurations: { 'asset-1': 4 },
     }),
     idGenerator: fixedIdGenerator(),
@@ -30,7 +30,7 @@ describe('runCli', () => {
     const result = await runCli('track add', { appController: app.controller });
 
     expect(result.ok).toBe(true);
-    expect(app.sessionStore.getState().trackOrder).toEqual(['track-1']);
+    expect(app.sessionReader.getState().trackOrder).toEqual(['track-1']);
   });
 
   it('"volume track-1 0.5" updates the track volume', async () => {
@@ -42,7 +42,7 @@ describe('runCli', () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(app.sessionStore.getState().tracksById['track-1'].volume).toBe(0.5);
+    expect(app.sessionReader.getState().tracksById['track-1'].volume).toBe(0.5);
   });
 
   it('"session export" exports the current in-memory session', async () => {
@@ -70,6 +70,6 @@ describe('runCli', () => {
     });
 
     expect(result.ok).toBe(false);
-    expect(app.sessionStore.getState().trackOrder).toEqual([]);
+    expect(app.sessionReader.getState().trackOrder).toEqual([]);
   });
 });

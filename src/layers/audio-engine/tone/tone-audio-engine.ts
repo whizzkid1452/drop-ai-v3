@@ -6,12 +6,12 @@ import {
   getDestination,
   getTransport,
 } from 'tone';
-import type { SessionState } from '@/layers/core/session/session-state';
+import type { SessionState } from '@/layers/session/session-state';
 import type {
   AddAudioRegionInput,
-  AudioProvider,
+  IAudioEngine,
   LoopRange,
-} from '../audio-provider';
+} from '../audio-engine';
 import { encodeWav } from '../wav-encoder';
 
 interface TrackNode {
@@ -30,7 +30,7 @@ function unitToDb(volume: number): number {
   return volume <= 0 ? -Infinity : 20 * Math.log10(volume);
 }
 
-export class ToneAudioProvider implements AudioProvider {
+export class ToneAudioEngine implements IAudioEngine {
   private readonly tracks = new Map<string, TrackNode>();
   private readonly regions = new Map<string, RegionNode>();
   private readonly buffers = new Map<string, ToneAudioBuffer>();

@@ -1,26 +1,26 @@
-import type { AudioProvider } from '@/layers/audio/audio-provider';
-import { TrackNotFoundError } from '@/layers/core/session/session-errors';
-import { sessionOps } from '@/layers/core/session/session-operations';
-import type { SessionStore } from '@/layers/core/session/session-store';
+import type { IAudioEngine } from '@/layers/audio-engine/audio-engine';
+import { TrackNotFoundError } from '@/layers/session/session-errors';
+import { sessionOps } from '@/layers/session/session-operations';
+import type { ISessionStore } from '@/layers/session/session-store';
 import type { TrackCommandTarget } from './command-controller';
 import type { IdGenerator } from './id-generator';
 
 const DEFAULT_REGION_OFFSET = 0;
 
 export interface TrackControllerDependencies {
-  sessionStore: SessionStore;
-  audioProvider: AudioProvider;
+  sessionStore: ISessionStore;
+  audioEngine: IAudioEngine;
   idGenerator: IdGenerator;
 }
 
 export class TrackController implements TrackCommandTarget {
-  private readonly sessionStore: SessionStore;
-  private readonly audioProvider: AudioProvider;
+  private readonly sessionStore: ISessionStore;
+  private readonly audioEngine: IAudioEngine;
   private readonly idGenerator: IdGenerator;
 
   constructor(deps: TrackControllerDependencies) {
     this.sessionStore = deps.sessionStore;
-    this.audioProvider = deps.audioProvider;
+    this.audioEngine = deps.audioEngine;
     this.idGenerator = deps.idGenerator;
   }
 
@@ -30,7 +30,7 @@ export class TrackController implements TrackCommandTarget {
     this.sessionStore.applyOperation((state) =>
       sessionOps.addTrack(state, { trackId, name: trackId })
     );
-    this.audioProvider.createTrack(trackId);
+    this.audioEngine.createTrack(trackId);
 
     return { id: trackId };
   }
@@ -39,35 +39,35 @@ export class TrackController implements TrackCommandTarget {
     this.sessionStore.applyOperation((state) =>
       sessionOps.removeTrack(state, { trackId })
     );
-    this.audioProvider.removeTrack(trackId);
+    this.audioEngine.removeTrack(trackId);
   }
 
   setTrackVolume(trackId: string, volume: number): void {
     this.sessionStore.applyOperation((state) =>
       sessionOps.setTrackVolume(state, { trackId, volume })
     );
-    this.audioProvider.setTrackVolume(trackId, volume);
+    this.audioEngine.setTrackVolume(trackId, volume);
   }
 
   setTrackMute(trackId: string, muted: boolean): void {
     this.sessionStore.applyOperation((state) =>
       sessionOps.setTrackMute(state, { trackId, muted })
     );
-    this.audioProvider.setTrackMute(trackId, muted);
+    this.audioEngine.setTrackMute(trackId, muted);
   }
 
   setTrackSolo(trackId: string, soloed: boolean): void {
     this.sessionStore.applyOperation((state) =>
       sessionOps.setTrackSolo(state, { trackId, soloed })
     );
-    this.audioProvider.setTrackSolo(trackId, soloed);
+    this.audioEngine.setTrackSolo(trackId, soloed);
   }
 
   setTrackPan(trackId: string, pan: number): void {
     this.sessionStore.applyOperation((state) =>
       sessionOps.setTrackPan(state, { trackId, pan })
     );
-    this.audioProvider.setTrackPan(trackId, pan);
+    this.audioEngine.setTrackPan(trackId, pan);
   }
 
   async addRegionFromAsset(
@@ -77,7 +77,7 @@ export class TrackController implements TrackCommandTarget {
   ): Promise<{ id: string }> {
     this.assertTrackExists(trackId);
     const regionId = this.idGenerator.next('region');
-    const duration = await this.audioProvider.getAssetDuration(assetId);
+    const duration = await this.audioEngine.getAssetDuration(assetId);
 
     this.addRegionWithKnownDuration({
       trackId,
@@ -98,10 +98,7 @@ export class TrackController implements TrackCommandTarget {
     this.assertTrackExists(trackId);
     const assetId = this.idGenerator.next('asset');
     const regionId = this.idGenerator.next('region');
-    const { duration } = await this.audioProvider.importFileAsset(
-      assetId,
-      file
-    );
+    const { duration } = await this.audioEngine.importFileAsset(assetId, file);
 
     this.addRegionWithKnownDuration({
       trackId,
@@ -118,21 +115,21 @@ export class TrackController implements TrackCommandTarget {
     this.sessionStore.applyOperation((state) =>
       sessionOps.moveRegion(state, { trackId, regionId, startTime })
     );
-    this.audioProvider.moveRegion(trackId, regionId, startTime);
+    this.audioEngine.moveRegion(trackId, regionId, startTime);
   }
 
   resizeRegion(trackId: string, regionId: string, duration: number): void {
     this.sessionStore.applyOperation((state) =>
       sessionOps.resizeRegion(state, { trackId, regionId, duration })
     );
-    this.audioProvider.resizeRegion(trackId, regionId, duration);
+    this.audioEngine.resizeRegion(trackId, regionId, duration);
   }
 
   removeRegion(trackId: string, regionId: string): void {
     this.sessionStore.applyOperation((state) =>
       sessionOps.removeRegion(state, { trackId, regionId })
     );
-    this.audioProvider.removeRegion(trackId, regionId);
+    this.audioEngine.removeRegion(trackId, regionId);
   }
 
   splitRegion(
@@ -155,8 +152,8 @@ export class TrackController implements TrackCommandTarget {
     const leftRegion = nextState.tracksById[trackId].regionsById[regionId];
     const rightRegion = nextState.tracksById[trackId].regionsById[newRegionId];
 
-    this.audioProvider.resizeRegion(trackId, regionId, leftRegion.duration);
-    this.audioProvider.addRegion({
+    this.audioEngine.resizeRegion(trackId, regionId, leftRegion.duration);
+    this.audioEngine.addRegion({
       trackId,
       regionId: newRegionId,
       assetId: rightRegion.assetId,
@@ -191,7 +188,7 @@ export class TrackController implements TrackCommandTarget {
         offset: DEFAULT_REGION_OFFSET,
       })
     );
-    this.audioProvider.addRegion({
+    this.audioEngine.addRegion({
       trackId: input.trackId,
       regionId: input.regionId,
       assetId: input.assetId,

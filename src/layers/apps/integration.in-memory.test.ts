@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createApp } from '@/layers/composition/create-app';
-import { FakeAudioProvider } from '@/layers/audio/fake-audio-provider';
+import { FakeAudioEngine } from '@/layers/audio-engine/fake-audio-engine';
 
 function fixedIdGenerator() {
   const counters: Record<string, number> = {};
@@ -15,7 +15,7 @@ function fixedIdGenerator() {
 describe('in-memory end-to-end session lifecycle', () => {
   it('edits an in-memory session and exports it as WAV data', async () => {
     const app = createApp({
-      audioProvider: new FakeAudioProvider({
+      audioEngine: new FakeAudioEngine({
         assetDurations: { 'asset-1': 4 },
       }),
       idGenerator: fixedIdGenerator(),
@@ -39,7 +39,7 @@ describe('in-memory end-to-end session lifecycle', () => {
     });
     expect(splitResult.ok).toBe(true);
 
-    const session = app.sessionStore.getState();
+    const session = app.sessionReader.getState();
     expect(session.trackOrder).toEqual(['track-1']);
     expect(session.tracksById['track-1'].regionOrder).toEqual([
       'region-1',

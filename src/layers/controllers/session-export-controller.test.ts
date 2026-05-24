@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { SessionExportController } from './session-export-controller';
-import { FakeAudioProvider } from '@/layers/audio/fake-audio-provider';
+import { FakeAudioEngine } from '@/layers/audio-engine/fake-audio-engine';
 import {
   createSessionStore,
-  type SessionStore,
-} from '@/layers/core/session/session-store';
-import { createEmptySession } from '@/layers/core/session/session-state';
-import { addTrack } from '@/layers/core/session/session-operations';
+  type ISessionStore,
+} from '@/layers/session/session-store';
+import { createEmptySession } from '@/layers/session/session-state';
+import { addTrack } from '@/layers/session/session-operations';
 import { createCallRecorder } from '@/layers/testing/call-recorder';
 
 interface Harness {
-  store: SessionStore;
+  store: ISessionStore;
   recorder: ReturnType<typeof createCallRecorder>;
   controller: SessionExportController;
 }
@@ -20,10 +20,10 @@ function setup(): Harness {
     initialSession: createEmptySession({ id: 'session-1' }),
   });
   const recorder = createCallRecorder();
-  const audio = new FakeAudioProvider({ recorder });
+  const audio = new FakeAudioEngine({ recorder });
   const controller = new SessionExportController({
     sessionStore: store,
-    audioProvider: audio,
+    audioEngine: audio,
   });
   return { store, recorder, controller };
 }

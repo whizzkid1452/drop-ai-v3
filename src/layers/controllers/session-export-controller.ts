@@ -1,23 +1,20 @@
-import type { AudioProvider } from '@/layers/audio/audio-provider';
-import type {
-  SessionState,
-  TrackState,
-} from '@/layers/core/session/session-state';
-import type { SessionStore } from '@/layers/core/session/session-store';
+import type { IAudioEngine } from '@/layers/audio-engine/audio-engine';
+import type { SessionState, TrackState } from '@/layers/session/session-state';
+import type { ISessionStore } from '@/layers/session/session-store';
 import type { SessionExportCommandTarget } from './command-controller';
 
 export interface SessionExportControllerDependencies {
-  sessionStore: SessionStore;
-  audioProvider: AudioProvider;
+  sessionStore: ISessionStore;
+  audioEngine: IAudioEngine;
 }
 
 export class SessionExportController implements SessionExportCommandTarget {
-  private readonly sessionStore: SessionStore;
-  private readonly audioProvider: AudioProvider;
+  private readonly sessionStore: ISessionStore;
+  private readonly audioEngine: IAudioEngine;
 
   constructor(deps: SessionExportControllerDependencies) {
     this.sessionStore = deps.sessionStore;
-    this.audioProvider = deps.audioProvider;
+    this.audioEngine = deps.audioEngine;
   }
 
   async exportSession(
@@ -28,7 +25,7 @@ export class SessionExportController implements SessionExportCommandTarget {
     if (duration <= 0) {
       throw new Error('Cannot export an empty session.');
     }
-    const blob = await this.audioProvider.exportSession(duration, snapshot);
+    const blob = await this.audioEngine.exportSession(duration, snapshot);
     return {
       blob,
       filename: filename ?? `${snapshot.id}.wav`,

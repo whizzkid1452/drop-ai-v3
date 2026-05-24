@@ -84,9 +84,9 @@ describe('architecture boundary', () => {
       expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
 
-    it('does not import tone from core/', () => {
+    it('does not import tone from session/', () => {
       const offenders = toneImporters.filter((file) =>
-        isInsideLayer(file.relativePath, 'core')
+        isInsideLayer(file.relativePath, 'session')
       );
       expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
@@ -98,39 +98,42 @@ describe('architecture boundary', () => {
       expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
 
-    it('allows tone import only from audio/tone/', () => {
+    it('allows tone import only from audio-engine/tone/', () => {
       const offenders = toneImporters.filter(
-        (file) => !isInsidePath(file.relativePath, ['audio', 'tone'])
+        (file) => !isInsidePath(file.relativePath, ['audio-engine', 'tone'])
       );
       expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
   });
 
-  describe('controllers use AudioProvider interface only', () => {
+  describe('controllers use IAudioEngine interface only', () => {
     const controllerFiles = ALL_SOURCE_FILES.filter((file) =>
       isInsideLayer(file.relativePath, 'controllers')
     );
 
-    function importsAudioPath(content: string, audioSubpath: string): boolean {
+    function importsAudioEnginePath(
+      content: string,
+      audioSubpath: string
+    ): boolean {
       const aliasPattern = new RegExp(
-        `(?:from|import)\\s+['"]@/layers/audio/${audioSubpath}(?:/[^'"]*)?['"]`
+        `(?:from|import)\\s+['"]@/layers/audio-engine/${audioSubpath}(?:/[^'"]*)?['"]`
       );
       const relativePattern = new RegExp(
-        `(?:from|import)\\s+['"](?:\\.\\.?/)+layers/audio/${audioSubpath}(?:/[^'"]*)?['"]`
+        `(?:from|import)\\s+['"](?:\\.\\.?/)+layers/audio-engine/${audioSubpath}(?:/[^'"]*)?['"]`
       );
       return aliasPattern.test(content) || relativePattern.test(content);
     }
 
-    it('controllers do not import FakeAudioProvider', () => {
+    it('controllers do not import FakeAudioEngine', () => {
       const offenders = controllerFiles.filter((file) =>
-        importsAudioPath(file.content, 'fake-audio-provider')
+        importsAudioEnginePath(file.content, 'fake-audio-engine')
       );
       expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
 
-    it('controllers do not import from layers/audio/tone', () => {
+    it('controllers do not import from layers/audio-engine/tone', () => {
       const offenders = controllerFiles.filter((file) =>
-        importsAudioPath(file.content, 'tone')
+        importsAudioEnginePath(file.content, 'tone')
       );
       expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
@@ -141,16 +144,16 @@ describe('architecture boundary', () => {
       isInsideLayer(file.relativePath, 'apps')
     );
 
-    it('apps do not import from layers/core directly', () => {
+    it('apps do not import from layers/session directly', () => {
       const offenders = appsFiles.filter((file) =>
-        importsFromInternalLayer(file.content, 'core')
+        importsFromInternalLayer(file.content, 'session')
       );
       expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
 
-    it('apps do not import from layers/audio directly', () => {
+    it('apps do not import from layers/audio-engine directly', () => {
       const offenders = appsFiles.filter((file) =>
-        importsFromInternalLayer(file.content, 'audio')
+        importsFromInternalLayer(file.content, 'audio-engine')
       );
       expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
