@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@9.12.2",
   "volta": {
     "node": "22.11.0",
     "pnpm": "9.12.2"
@@ -12,6 +13,7 @@
     "pnpm": ">=9.0.0"
   },
   "scripts": {
+    "build": "tsc -b",
     "test": "pnpm test:unit",
     "test:unit": "vitest run",
     "test:watch": "vitest",
@@ -20,6 +22,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
     "worktree:add": "node scripts/worktree.mjs add external",
     "worktree:add:internal": "node scripts/worktree.mjs add internal",
     "worktree:remove": "node scripts/worktree.mjs remove external",
