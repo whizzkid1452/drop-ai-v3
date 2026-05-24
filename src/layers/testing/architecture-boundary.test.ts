@@ -73,41 +73,41 @@ const ALL_SOURCE_FILES = collectSourceFiles(LAYERS_DIR);
 
 describe('architecture boundary', () => {
   describe('tone import boundary', () => {
-    const toneImporters = ALL_SOURCE_FILES.filter(file =>
+    const toneImporters = ALL_SOURCE_FILES.filter((file) =>
       importsModule(file.content, 'tone')
     );
 
     it('does not import tone from controllers/', () => {
-      const offenders = toneImporters.filter(file =>
+      const offenders = toneImporters.filter((file) =>
         isInsideLayer(file.relativePath, 'controllers')
       );
-      expect(offenders.map(file => file.relativePath)).toEqual([]);
+      expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
 
     it('does not import tone from core/', () => {
-      const offenders = toneImporters.filter(file =>
+      const offenders = toneImporters.filter((file) =>
         isInsideLayer(file.relativePath, 'core')
       );
-      expect(offenders.map(file => file.relativePath)).toEqual([]);
+      expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
 
     it('does not import tone from apps/', () => {
-      const offenders = toneImporters.filter(file =>
+      const offenders = toneImporters.filter((file) =>
         isInsideLayer(file.relativePath, 'apps')
       );
-      expect(offenders.map(file => file.relativePath)).toEqual([]);
+      expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
 
     it('allows tone import only from audio/tone/', () => {
       const offenders = toneImporters.filter(
-        file => !isInsidePath(file.relativePath, ['audio', 'tone'])
+        (file) => !isInsidePath(file.relativePath, ['audio', 'tone'])
       );
-      expect(offenders.map(file => file.relativePath)).toEqual([]);
+      expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
   });
 
   describe('controllers use AudioProvider interface only', () => {
-    const controllerFiles = ALL_SOURCE_FILES.filter(file =>
+    const controllerFiles = ALL_SOURCE_FILES.filter((file) =>
       isInsideLayer(file.relativePath, 'controllers')
     );
 
@@ -122,37 +122,37 @@ describe('architecture boundary', () => {
     }
 
     it('controllers do not import FakeAudioProvider', () => {
-      const offenders = controllerFiles.filter(file =>
+      const offenders = controllerFiles.filter((file) =>
         importsAudioPath(file.content, 'fake-audio-provider')
       );
-      expect(offenders.map(file => file.relativePath)).toEqual([]);
+      expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
 
     it('controllers do not import from layers/audio/tone', () => {
-      const offenders = controllerFiles.filter(file =>
+      const offenders = controllerFiles.filter((file) =>
         importsAudioPath(file.content, 'tone')
       );
-      expect(offenders.map(file => file.relativePath)).toEqual([]);
+      expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
   });
 
   describe('apps depend only on controllers and testing', () => {
-    const appsFiles = ALL_SOURCE_FILES.filter(file =>
+    const appsFiles = ALL_SOURCE_FILES.filter((file) =>
       isInsideLayer(file.relativePath, 'apps')
     );
 
     it('apps do not import from layers/core directly', () => {
-      const offenders = appsFiles.filter(file =>
+      const offenders = appsFiles.filter((file) =>
         importsFromInternalLayer(file.content, 'core')
       );
-      expect(offenders.map(file => file.relativePath)).toEqual([]);
+      expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
 
     it('apps do not import from layers/audio directly', () => {
-      const offenders = appsFiles.filter(file =>
+      const offenders = appsFiles.filter((file) =>
         importsFromInternalLayer(file.content, 'audio')
       );
-      expect(offenders.map(file => file.relativePath)).toEqual([]);
+      expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
 
     it('apps only import from layers/controllers, layers/composition, or layers/testing', () => {

@@ -17,7 +17,9 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "tone": "^15.1.22",
@@ -31,6 +33,7 @@
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.6.0",
     "jsdom": "^26.1.0",
+    "prettier": "^3.8.3",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.59.4",
     "vite": "^7.1.2",

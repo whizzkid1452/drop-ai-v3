@@ -17,7 +17,7 @@ describe('createSessionStore', () => {
   it('applies a pure operation and replaces state immutably', () => {
     const store = createSessionStore({ initialSession: initialSession() });
 
-    store.applyOperation(state =>
+    store.applyOperation((state) =>
       addTrack(state, { trackId: 'track-1', name: 'A' })
     );
 
@@ -31,7 +31,7 @@ describe('createSessionStore', () => {
     const listener = vi.fn();
     store.subscribe(listener);
 
-    store.applyOperation(state =>
+    store.applyOperation((state) =>
       addTrack(state, { trackId: 'track-1', name: 'A' })
     );
 
@@ -44,7 +44,7 @@ describe('createSessionStore', () => {
     const unsubscribe = store.subscribe(listener);
 
     unsubscribe();
-    store.applyOperation(state =>
+    store.applyOperation((state) =>
       addTrack(state, { trackId: 'track-1', name: 'A' })
     );
 

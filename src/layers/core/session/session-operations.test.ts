@@ -20,7 +20,6 @@ import {
 import { RegionNotFoundError, TrackNotFoundError } from './session-errors';
 import { createEmptySession } from './session-state';
 
-
 function freshSession() {
   return createEmptySession({ id: 'session-1' });
 }
@@ -65,8 +64,6 @@ describe('addTrack', () => {
 
     expect(session).toEqual(snapshotBefore);
   });
-
-
 
   it('preserves order when adding multiple tracks', () => {
     const session = freshSession();
@@ -123,12 +120,10 @@ describe('removeTrack', () => {
   it('throws TrackNotFoundError when the track does not exist', () => {
     const session = sessionWithTwoTracks();
 
-    expect(() =>
-      removeTrack(session, { trackId: 'missing-track' })
-    ).toThrow(TrackNotFoundError);
+    expect(() => removeTrack(session, { trackId: 'missing-track' })).toThrow(
+      TrackNotFoundError
+    );
   });
-
-
 
   it('does not mutate the input state', () => {
     const session = sessionWithTwoTracks();
@@ -162,7 +157,6 @@ describe('setTrackVolume', () => {
     expect(result.tracksById['track-1'].volume).toBe(0.5);
   });
 
-
   it('throws TrackNotFoundError when the track does not exist', () => {
     const session = sessionWithOneTrack();
 
@@ -186,7 +180,6 @@ describe('setTrackMute', () => {
 
     expect(result.tracksById['track-1'].muted).toBe(true);
   });
-
 
   it('throws TrackNotFoundError on missing track', () => {
     const session = sessionWithOneTrack();
@@ -297,7 +290,6 @@ describe('addRegion', () => {
     ).toThrow(TrackNotFoundError);
   });
 
-
   it('preserves order when adding multiple regions on the same track', () => {
     const afterFirst = addFirstRegion();
     const afterSecond = addFirstRegion(afterFirst, 'region-2', 2);
@@ -343,7 +335,6 @@ describe('moveRegion', () => {
       5
     );
   });
-
 
   it('throws RegionNotFoundError when the region does not exist', () => {
     const session = sessionWithOneRegion();
@@ -445,7 +436,6 @@ describe('removeRegion', () => {
       })
     ).toThrow(RegionNotFoundError);
   });
-
 });
 
 describe('splitRegion', () => {
@@ -485,9 +475,7 @@ describe('splitRegion', () => {
   it('creates the right region with the new id and adjusted offset', () => {
     const result = splitAtThree();
 
-    expect(
-      result.tracksById['track-1'].regionsById['region-1-right']
-    ).toEqual({
+    expect(result.tracksById['track-1'].regionsById['region-1-right']).toEqual({
       id: 'region-1-right',
       assetId: 'asset-1',
       startTime: 3,
@@ -558,7 +546,6 @@ describe('splitRegion', () => {
       })
     ).toThrow(RegionNotFoundError);
   });
-
 });
 
 describe('setPlaying', () => {
@@ -569,8 +556,6 @@ describe('setPlaying', () => {
 
     expect(result.playback.playing).toBe(true);
   });
-
-
 });
 
 describe('setPosition', () => {
@@ -581,7 +566,6 @@ describe('setPosition', () => {
 
     expect(result.playback.positionSeconds).toBe(3.5);
   });
-
 });
 
 describe('setBpm', () => {
@@ -592,7 +576,6 @@ describe('setBpm', () => {
 
     expect(result.playback.bpm).toBe(140);
   });
-
 
   it('rejects a non-positive bpm', () => {
     const session = freshSession();
@@ -611,16 +594,11 @@ describe('setMasterVolume', () => {
     expect(result.playback.masterVolume).toBe(0.5);
   });
 
-
   it('rejects a volume outside [0, 1]', () => {
     const session = freshSession();
 
-    expect(() =>
-      setMasterVolume(session, { volume: -0.1 })
-    ).toThrow(/volume/i);
-    expect(() =>
-      setMasterVolume(session, { volume: 1.5 })
-    ).toThrow(/volume/i);
+    expect(() => setMasterVolume(session, { volume: -0.1 })).toThrow(/volume/i);
+    expect(() => setMasterVolume(session, { volume: 1.5 })).toThrow(/volume/i);
   });
 });
 
@@ -641,16 +619,15 @@ describe('setLoop', () => {
     });
   });
 
-
   it('rejects when enabled and end <= start', () => {
     const session = freshSession();
 
-    expect(() =>
-      setLoop(session, { start: 4, end: 4, enabled: true })
-    ).toThrow(/loop/i);
-    expect(() =>
-      setLoop(session, { start: 5, end: 2, enabled: true })
-    ).toThrow(/loop/i);
+    expect(() => setLoop(session, { start: 4, end: 4, enabled: true })).toThrow(
+      /loop/i
+    );
+    expect(() => setLoop(session, { start: 5, end: 2, enabled: true })).toThrow(
+      /loop/i
+    );
   });
 
   it('allows end <= start when not enabled', () => {

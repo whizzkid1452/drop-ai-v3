@@ -346,8 +346,7 @@ function parseSession(args: string[]): CliParseResult {
     case 'export':
       return success({
         type: 'session.export',
-        payload:
-          rest.length > 0 ? { filename: rest.join(' ') } : undefined,
+        payload: rest.length > 0 ? { filename: rest.join(' ') } : undefined,
       });
 
     default:

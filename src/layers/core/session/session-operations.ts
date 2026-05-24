@@ -50,7 +50,7 @@ export function removeTrack(
 
   return {
     ...state,
-    trackOrder: state.trackOrder.filter(id => id !== input.trackId),
+    trackOrder: state.trackOrder.filter((id) => id !== input.trackId),
     tracksById: remainingTracks,
   };
 }
@@ -83,7 +83,7 @@ export function setTrackVolume(
   state: SessionState,
   input: SetTrackVolumeInput
 ): SessionState {
-  return updateTrack(state, input.trackId, track => ({
+  return updateTrack(state, input.trackId, (track) => ({
     ...track,
     volume: input.volume,
   }));
@@ -98,7 +98,7 @@ export function setTrackMute(
   state: SessionState,
   input: SetTrackMuteInput
 ): SessionState {
-  return updateTrack(state, input.trackId, track => ({
+  return updateTrack(state, input.trackId, (track) => ({
     ...track,
     muted: input.muted,
   }));
@@ -113,7 +113,7 @@ export function setTrackSolo(
   state: SessionState,
   input: SetTrackSoloInput
 ): SessionState {
-  return updateTrack(state, input.trackId, track => ({
+  return updateTrack(state, input.trackId, (track) => ({
     ...track,
     soloed: input.soloed,
   }));
@@ -128,7 +128,7 @@ export function setTrackPan(
   state: SessionState,
   input: SetTrackPanInput
 ): SessionState {
-  return updateTrack(state, input.trackId, track => ({
+  return updateTrack(state, input.trackId, (track) => ({
     ...track,
     pan: input.pan,
   }));
@@ -147,7 +147,7 @@ export function addRegion(
   state: SessionState,
   input: AddRegionInput
 ): SessionState {
-  return updateTrack(state, input.trackId, track => ({
+  return updateTrack(state, input.trackId, (track) => ({
     ...track,
     regionOrder: [...track.regionOrder, input.regionId],
     regionsById: {
@@ -169,7 +169,7 @@ function updateRegion(
   regionId: string,
   patch: (region: RegionState) => RegionState
 ): SessionState {
-  return updateTrack(state, trackId, track => {
+  return updateTrack(state, trackId, (track) => {
     const existingRegion = track.regionsById[regionId];
     if (!existingRegion) {
       throw new RegionNotFoundError(trackId, regionId);
@@ -194,12 +194,10 @@ export function moveRegion(
   state: SessionState,
   input: MoveRegionInput
 ): SessionState {
-  return updateRegion(
-    state,
-    input.trackId,
-    input.regionId,
-    region => ({ ...region, startTime: input.startTime })
-  );
+  return updateRegion(state, input.trackId, input.regionId, (region) => ({
+    ...region,
+    startTime: input.startTime,
+  }));
 }
 
 export interface ResizeRegionInput {
@@ -215,12 +213,10 @@ export function resizeRegion(
   if (input.duration <= 0) {
     throw new Error(`Region duration must be positive: ${input.duration}`);
   }
-  return updateRegion(
-    state,
-    input.trackId,
-    input.regionId,
-    region => ({ ...region, duration: input.duration })
-  );
+  return updateRegion(state, input.trackId, input.regionId, (region) => ({
+    ...region,
+    duration: input.duration,
+  }));
 }
 
 export interface RemoveRegionInput {
@@ -232,7 +228,7 @@ export function removeRegion(
   state: SessionState,
   input: RemoveRegionInput
 ): SessionState {
-  return updateTrack(state, input.trackId, track => {
+  return updateTrack(state, input.trackId, (track) => {
     if (!(input.regionId in track.regionsById)) {
       throw new RegionNotFoundError(input.trackId, input.regionId);
     }
@@ -240,7 +236,7 @@ export function removeRegion(
       track.regionsById;
     return {
       ...track,
-      regionOrder: track.regionOrder.filter(id => id !== input.regionId),
+      regionOrder: track.regionOrder.filter((id) => id !== input.regionId),
       regionsById: remainingRegions,
     };
   });
@@ -340,14 +336,17 @@ export function splitRegion(
   state: SessionState,
   input: SplitRegionInput
 ): SessionState {
-  return updateTrack(state, input.trackId, track => {
+  return updateTrack(state, input.trackId, (track) => {
     const originalRegion = track.regionsById[input.regionId];
     if (!originalRegion) {
       throw new RegionNotFoundError(input.trackId, input.regionId);
     }
 
     const regionEnd = originalRegion.startTime + originalRegion.duration;
-    if (input.splitTime <= originalRegion.startTime || input.splitTime >= regionEnd) {
+    if (
+      input.splitTime <= originalRegion.startTime ||
+      input.splitTime >= regionEnd
+    ) {
       throw new Error(
         `Cannot split region ${input.regionId} at ${input.splitTime}: must be strictly inside (${originalRegion.startTime}, ${regionEnd}).`
       );

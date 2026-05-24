@@ -65,7 +65,9 @@ describe('encodeWavBytes', () => {
     const bytesPerSample = 4;
     const dataBytes = samples * channels * bytesPerSample;
 
-    const arrayBuffer = encodeWavBytes(createMockAudioBuffer(channels, samples));
+    const arrayBuffer = encodeWavBytes(
+      createMockAudioBuffer(channels, samples)
+    );
 
     expect(arrayBuffer.byteLength).toBe(WAV_HEADER_BYTES + dataBytes);
   });

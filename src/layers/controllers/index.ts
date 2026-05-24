@@ -1,4 +1,7 @@
-export { AppController, type AppControllerDependencies } from './app-controller';
+export {
+  AppController,
+  type AppControllerDependencies,
+} from './app-controller';
 export {
   CommandController,
   type PlaybackCommandTarget,

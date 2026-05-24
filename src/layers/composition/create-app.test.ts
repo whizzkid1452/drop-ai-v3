@@ -38,7 +38,7 @@ describe('createApp', () => {
 
     expect(result.ok).toBe(true);
     expect(app.sessionStore.getState().trackOrder).toEqual(['track-1']);
-    expect(recorder.getCalls('createTrack').map(c => c.args)).toEqual([
+    expect(recorder.getCalls('createTrack').map((c) => c.args)).toEqual([
       ['track-1'],
     ]);
   });

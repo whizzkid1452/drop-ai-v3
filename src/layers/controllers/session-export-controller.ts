@@ -20,7 +20,9 @@ export class SessionExportController implements SessionExportCommandTarget {
     this.audioProvider = deps.audioProvider;
   }
 
-  async exportSession(filename?: string): Promise<{ blob: Blob; filename: string }> {
+  async exportSession(
+    filename?: string
+  ): Promise<{ blob: Blob; filename: string }> {
     const snapshot = this.sessionStore.getState();
     const duration = computeSessionDuration(snapshot);
     if (duration <= 0) {

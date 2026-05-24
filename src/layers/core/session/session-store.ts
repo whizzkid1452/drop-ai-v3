@@ -25,9 +25,9 @@ export function createSessionStore({
 
   return {
     getState: () => store.getState(),
-    subscribe: listener => store.subscribe(listener),
-    applyOperation: transform => {
-      store.setState(state => transform(state), true);
+    subscribe: (listener) => store.subscribe(listener),
+    applyOperation: (transform) => {
+      store.setState((state) => transform(state), true);
     },
   };
 }

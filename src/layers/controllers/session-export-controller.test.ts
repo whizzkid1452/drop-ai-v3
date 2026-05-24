@@ -30,10 +30,10 @@ function setup(): Harness {
 
 function setupWithRegion() {
   const h = setup();
-  h.store.applyOperation(state =>
+  h.store.applyOperation((state) =>
     addTrack(state, { trackId: 'track-1', name: 'A' })
   );
-  h.store.applyOperation(state => ({
+  h.store.applyOperation((state) => ({
     ...state,
     tracksById: {
       ...state.tracksById,

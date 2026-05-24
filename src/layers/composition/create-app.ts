@@ -1,7 +1,10 @@
 import type { AudioProvider } from '@/layers/audio/audio-provider';
 import { FakeAudioProvider } from '@/layers/audio/fake-audio-provider';
 import { AppController } from '@/layers/controllers/app-controller';
-import { createUuidGenerator, type IdGenerator } from '@/layers/controllers/id-generator';
+import {
+  createUuidGenerator,
+  type IdGenerator,
+} from '@/layers/controllers/id-generator';
 import { PlaybackController } from '@/layers/controllers/playback-controller';
 import { SessionExportController } from '@/layers/controllers/session-export-controller';
 import { TrackController } from '@/layers/controllers/track-controller';

@@ -97,5 +97,4 @@ describe('PlaybackController', () => {
     expect(h.store.getState().playback.masterVolume).toBe(0.6);
     expect(h.recorder.getCalls('setMasterVolume')[0].args).toEqual([0.6]);
   });
-
 });

@@ -124,10 +124,7 @@ describe('CommandController', () => {
       data: { id: 'track-1' },
     });
     expect(trackController.addTrack).toHaveBeenCalledTimes(1);
-    expect(trackController.setTrackVolume).toHaveBeenCalledWith(
-      'track-1',
-      0.5
-    );
+    expect(trackController.setTrackVolume).toHaveBeenCalledWith('track-1', 0.5);
     expect(trackController.setTrackMute).toHaveBeenCalledWith('track-1', true);
     expect(trackController.setTrackSolo).toHaveBeenCalledWith('track-1', true);
     expect(trackController.setTrackPan).toHaveBeenCalledWith('track-1', -0.25);

@@ -45,7 +45,7 @@ const playbackLoopCommandSchema = z
         enabled: z.boolean(),
       })
       .strict()
-      .refine(payload => !payload.enabled || payload.end > payload.start, {
+      .refine((payload) => !payload.enabled || payload.end > payload.start, {
         message: 'Loop end must be greater than loop start.',
         path: ['end'],
       }),

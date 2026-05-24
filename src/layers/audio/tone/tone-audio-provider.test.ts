@@ -153,15 +153,26 @@ async function offlineMock(
   const channelInstancesAtStart = toneState.channelInstances.length;
   const playerInstancesAtStart = toneState.playerInstances.length;
   await callback({ transport });
-  const sampleCount = Math.max(1, Math.floor(duration * toneState.offlineSampleRate));
-  const buffer = createMockAudioBuffer(2, sampleCount, toneState.offlineSampleRate);
+  const sampleCount = Math.max(
+    1,
+    Math.floor(duration * toneState.offlineSampleRate)
+  );
+  const buffer = createMockAudioBuffer(
+    2,
+    sampleCount,
+    toneState.offlineSampleRate
+  );
   toneState.offlineCalls.push({
     duration,
     transport,
     channelInstancesAtStart,
     playerInstancesAtStart,
-    channelInstancesAfter: toneState.channelInstances.slice(channelInstancesAtStart),
-    playerInstancesAfter: toneState.playerInstances.slice(playerInstancesAtStart),
+    channelInstancesAfter: toneState.channelInstances.slice(
+      channelInstancesAtStart
+    ),
+    playerInstancesAfter: toneState.playerInstances.slice(
+      playerInstancesAtStart
+    ),
   });
   return { get: () => buffer };
 }
@@ -313,7 +324,9 @@ describe('ToneAudioProvider track wiring', () => {
     provider.createTrack('track-1');
 
     expect(toneState.channelInstances).toHaveLength(1);
-    expect(toneState.channelInstances[0].toDestination).toHaveBeenCalledTimes(1);
+    expect(toneState.channelInstances[0].toDestination).toHaveBeenCalledTimes(
+      1
+    );
   });
 
   it('createTrack is idempotent for the same trackId', async () => {

@@ -27,7 +27,7 @@ export class TrackController implements TrackCommandTarget {
   async addTrack(): Promise<{ id: string }> {
     const trackId = this.idGenerator.next('track');
 
-    this.sessionStore.applyOperation(state =>
+    this.sessionStore.applyOperation((state) =>
       sessionOps.addTrack(state, { trackId, name: trackId })
     );
     this.audioProvider.createTrack(trackId);
@@ -36,35 +36,35 @@ export class TrackController implements TrackCommandTarget {
   }
 
   removeTrack(trackId: string): void {
-    this.sessionStore.applyOperation(state =>
+    this.sessionStore.applyOperation((state) =>
       sessionOps.removeTrack(state, { trackId })
     );
     this.audioProvider.removeTrack(trackId);
   }
 
   setTrackVolume(trackId: string, volume: number): void {
-    this.sessionStore.applyOperation(state =>
+    this.sessionStore.applyOperation((state) =>
       sessionOps.setTrackVolume(state, { trackId, volume })
     );
     this.audioProvider.setTrackVolume(trackId, volume);
   }
 
   setTrackMute(trackId: string, muted: boolean): void {
-    this.sessionStore.applyOperation(state =>
+    this.sessionStore.applyOperation((state) =>
       sessionOps.setTrackMute(state, { trackId, muted })
     );
     this.audioProvider.setTrackMute(trackId, muted);
   }
 
   setTrackSolo(trackId: string, soloed: boolean): void {
-    this.sessionStore.applyOperation(state =>
+    this.sessionStore.applyOperation((state) =>
       sessionOps.setTrackSolo(state, { trackId, soloed })
     );
     this.audioProvider.setTrackSolo(trackId, soloed);
   }
 
   setTrackPan(trackId: string, pan: number): void {
-    this.sessionStore.applyOperation(state =>
+    this.sessionStore.applyOperation((state) =>
       sessionOps.setTrackPan(state, { trackId, pan })
     );
     this.audioProvider.setTrackPan(trackId, pan);
@@ -98,7 +98,10 @@ export class TrackController implements TrackCommandTarget {
     this.assertTrackExists(trackId);
     const assetId = this.idGenerator.next('asset');
     const regionId = this.idGenerator.next('region');
-    const { duration } = await this.audioProvider.importFileAsset(assetId, file);
+    const { duration } = await this.audioProvider.importFileAsset(
+      assetId,
+      file
+    );
 
     this.addRegionWithKnownDuration({
       trackId,
@@ -112,21 +115,21 @@ export class TrackController implements TrackCommandTarget {
   }
 
   moveRegion(trackId: string, regionId: string, startTime: number): void {
-    this.sessionStore.applyOperation(state =>
+    this.sessionStore.applyOperation((state) =>
       sessionOps.moveRegion(state, { trackId, regionId, startTime })
     );
     this.audioProvider.moveRegion(trackId, regionId, startTime);
   }
 
   resizeRegion(trackId: string, regionId: string, duration: number): void {
-    this.sessionStore.applyOperation(state =>
+    this.sessionStore.applyOperation((state) =>
       sessionOps.resizeRegion(state, { trackId, regionId, duration })
     );
     this.audioProvider.resizeRegion(trackId, regionId, duration);
   }
 
   removeRegion(trackId: string, regionId: string): void {
-    this.sessionStore.applyOperation(state =>
+    this.sessionStore.applyOperation((state) =>
       sessionOps.removeRegion(state, { trackId, regionId })
     );
     this.audioProvider.removeRegion(trackId, regionId);
@@ -139,8 +142,13 @@ export class TrackController implements TrackCommandTarget {
   ): { leftId: string; rightId: string } {
     const newRegionId = this.idGenerator.next('region');
 
-    this.sessionStore.applyOperation(state =>
-      sessionOps.splitRegion(state, { trackId, regionId, splitTime, newRegionId })
+    this.sessionStore.applyOperation((state) =>
+      sessionOps.splitRegion(state, {
+        trackId,
+        regionId,
+        splitTime,
+        newRegionId,
+      })
     );
 
     const nextState = this.sessionStore.getState();
@@ -173,7 +181,7 @@ export class TrackController implements TrackCommandTarget {
     startTime: number;
     duration: number;
   }): void {
-    this.sessionStore.applyOperation(state =>
+    this.sessionStore.applyOperation((state) =>
       sessionOps.addRegion(state, {
         trackId: input.trackId,
         regionId: input.regionId,

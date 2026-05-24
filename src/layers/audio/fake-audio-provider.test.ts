@@ -11,7 +11,7 @@ describe('FakeAudioProvider', () => {
     provider.pause();
     provider.stop();
 
-    expect(recorder.calls.map(call => call.method)).toEqual([
+    expect(recorder.calls.map((call) => call.method)).toEqual([
       'play',
       'pause',
       'stop',

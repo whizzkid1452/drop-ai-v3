@@ -83,7 +83,7 @@ describe('TrackController.addTrack', () => {
 
     await controller.addTrack();
 
-    expect(recorder.getCalls('createTrack').map(call => call.args)).toEqual([
+    expect(recorder.getCalls('createTrack').map((call) => call.args)).toEqual([
       ['track-1'],
     ]);
   });
@@ -98,7 +98,7 @@ describe('TrackController.removeTrack', () => {
 
     expect(harness.store.getState().trackOrder).toEqual([]);
     expect(
-      harness.recorder.getCalls('removeTrack').map(call => call.args)
+      harness.recorder.getCalls('removeTrack').map((call) => call.args)
     ).toEqual([['track-1']]);
   });
 
@@ -182,7 +182,7 @@ describe('TrackController.addRegionFromAsset', () => {
       offset: 0,
     });
 
-    const methodOrder = harness.recorder.calls.map(call => call.method);
+    const methodOrder = harness.recorder.calls.map((call) => call.method);
     const durationIndex = methodOrder.indexOf('getAssetDuration');
     const addRegionIndex = methodOrder.indexOf('addRegion');
     expect(durationIndex).toBeGreaterThanOrEqual(0);
@@ -222,7 +222,7 @@ describe('TrackController.addRegionFromFile', () => {
       offset: 0,
     });
 
-    const methodOrder = harness.recorder.calls.map(call => call.method);
+    const methodOrder = harness.recorder.calls.map((call) => call.method);
     expect(methodOrder.indexOf('importFileAsset')).toBeGreaterThanOrEqual(0);
     expect(methodOrder.indexOf('addRegion')).toBeGreaterThan(
       methodOrder.indexOf('importFileAsset')
@@ -285,9 +285,9 @@ describe('TrackController.moveRegion / resizeRegion / removeRegion', () => {
   it('removeRegion updates session and audio', () => {
     harness.controller.removeRegion('track-1', 'region-1');
 
-    expect(
-      harness.store.getState().tracksById['track-1'].regionOrder
-    ).toEqual([]);
+    expect(harness.store.getState().tracksById['track-1'].regionOrder).toEqual(
+      []
+    );
     expect(harness.recorder.getCalls('removeRegion')[0].args).toEqual([
       'track-1',
       'region-1',
@@ -295,9 +295,9 @@ describe('TrackController.moveRegion / resizeRegion / removeRegion', () => {
   });
 
   it('removeRegion throws RegionNotFoundError when missing', () => {
-    expect(() =>
-      harness.controller.removeRegion('track-1', 'missing')
-    ).toThrow(RegionNotFoundError);
+    expect(() => harness.controller.removeRegion('track-1', 'missing')).toThrow(
+      RegionNotFoundError
+    );
   });
 });
 
@@ -313,7 +313,9 @@ describe('TrackController.splitRegion', () => {
     expect(result).toEqual({ leftId: 'region-1', rightId: 'region-2' });
 
     const resizeCalls = harness.recorder.getCalls('resizeRegion');
-    expect(resizeCalls.map(c => c.args)).toEqual([['track-1', 'region-1', 2]]);
+    expect(resizeCalls.map((c) => c.args)).toEqual([
+      ['track-1', 'region-1', 2],
+    ]);
 
     const addRegionCalls = harness.recorder.getCalls('addRegion');
     expect(addRegionCalls).toHaveLength(1);
