@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ToneAudioBuffer } from 'tone';
 
 function fakeToneBuffer(duration: number): ToneAudioBuffer {
@@ -22,6 +22,12 @@ interface PlayerMock {
   start: ReturnType<typeof vi.fn>;
   stop: ReturnType<typeof vi.fn>;
   dispose: ReturnType<typeof vi.fn>;
+}
+
+interface ToneAudioBufferMock {
+  duration: number;
+  load: ReturnType<typeof vi.fn>;
+  loadedUrl: string | undefined;
 }
 
 interface OfflineTransportMock {
@@ -53,8 +59,10 @@ interface ToneState {
   destination: { volume: { value: number } };
   channelInstances: ChannelMock[];
   playerInstances: PlayerMock[];
+  toneAudioBufferInstances: ToneAudioBufferMock[];
   offlineCalls: OfflineRunRecord[];
   offlineSampleRate: number;
+  nextBufferDuration: number;
 }
 
 const toneState: ToneState = {
@@ -72,8 +80,10 @@ const toneState: ToneState = {
   destination: { volume: { value: 0 } },
   channelInstances: [],
   playerInstances: [],
+  toneAudioBufferInstances: [],
   offlineCalls: [],
   offlineSampleRate: 44100,
+  nextBufferDuration: 1,
 };
 
 function makeChannel(): ChannelMock {
@@ -116,6 +126,19 @@ class MockChannelCtor {
 class MockPlayerCtor {
   constructor(buffer: { duration: number } | undefined) {
     return makePlayer(buffer);
+  }
+}
+
+class MockToneAudioBufferCtor {
+  duration = toneState.nextBufferDuration;
+  loadedUrl: string | undefined;
+  load = vi.fn(async (url: string) => {
+    this.loadedUrl = url;
+    return this;
+  });
+
+  constructor() {
+    toneState.toneAudioBufferInstances.push(this);
   }
 }
 
@@ -165,7 +188,7 @@ vi.mock('tone', () => ({
   getDestination: () => toneState.destination,
   Channel: MockChannelCtor,
   Player: MockPlayerCtor,
-  ToneAudioBuffer: class {},
+  ToneAudioBuffer: MockToneAudioBufferCtor,
   Offline: offlineMock,
 }));
 
@@ -182,7 +205,13 @@ beforeEach(() => {
   toneState.destination.volume.value = 0;
   toneState.channelInstances.length = 0;
   toneState.playerInstances.length = 0;
+  toneState.toneAudioBufferInstances.length = 0;
   toneState.offlineCalls.length = 0;
+  toneState.nextBufferDuration = 1;
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe('ToneAudioProvider transport', () => {
@@ -362,6 +391,27 @@ describe('ToneAudioProvider region wiring', () => {
     await expect(provider.getAssetDuration('missing')).rejects.toThrow(
       /asset/i
     );
+  });
+
+  it('imports a File into a ToneAudioBuffer and registers it by assetId', async () => {
+    const { ToneAudioProvider } = await import('./tone-audio-provider');
+    const createObjectURL = vi.fn(() => 'blob:asset-1');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
+    toneState.nextBufferDuration = 3.75;
+    const provider = new ToneAudioProvider();
+    const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
+
+    const result = await provider.importFileAsset('asset-file-1', file);
+
+    expect(result).toEqual({ duration: 3.75 });
+    expect(createObjectURL).toHaveBeenCalledWith(file);
+    expect(toneState.toneAudioBufferInstances).toHaveLength(1);
+    expect(toneState.toneAudioBufferInstances[0].load).toHaveBeenCalledWith(
+      'blob:asset-1'
+    );
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:asset-1');
+    await expect(provider.getAssetDuration('asset-file-1')).resolves.toBe(3.75);
   });
 
   it('addRegion creates a Player, connects it to the track channel, and syncs at startTime/offset/duration', async () => {

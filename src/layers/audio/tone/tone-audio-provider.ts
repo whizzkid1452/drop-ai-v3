@@ -2,9 +2,9 @@ import {
   Channel,
   Offline,
   Player,
+  ToneAudioBuffer,
   getDestination,
   getTransport,
-  type ToneAudioBuffer,
 } from 'tone';
 import type { SessionState } from '@/layers/core/session/session-state';
 import type {
@@ -169,6 +169,21 @@ export class ToneAudioProvider implements AudioProvider {
       throw new Error(`Asset not registered: ${assetId}`);
     }
     return buffer.duration;
+  }
+
+  async importFileAsset(
+    assetId: string,
+    file: File
+  ): Promise<{ duration: number }> {
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      const buffer = new ToneAudioBuffer();
+      await buffer.load(objectUrl);
+      this.registerBuffer(assetId, buffer);
+      return { duration: buffer.duration };
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
   }
 
   async exportSession(
