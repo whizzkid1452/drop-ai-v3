@@ -175,11 +175,10 @@ export class ToneAudioProvider implements AudioProvider {
     durationSeconds: number,
     session: SessionState
   ): Promise<Blob> {
-    const currentBpm = getTransport().bpm.value;
     const buffers = this.buffers;
 
     const offlineBuffer = await Offline(({ transport }) => {
-      transport.bpm.value = currentBpm;
+      transport.bpm.value = session.playback.bpm;
 
       for (const trackId of session.trackOrder) {
         const track = session.tracksById[trackId];

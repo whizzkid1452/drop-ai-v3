@@ -509,13 +509,13 @@ describe('ToneAudioProvider.exportSession', () => {
     expect(toneState.offlineCalls[0].duration).toBe(2.5);
   });
 
-  it('copies current transport bpm to the offline transport', async () => {
+  it('copies session playback bpm to the offline transport', async () => {
     const provider = await makeProviderWithBuffers();
     toneState.transport.bpm.value = 96;
 
     await provider.exportSession(1, snapshotForExport());
 
-    expect(toneState.offlineCalls[0].transport.bpm.value).toBe(96);
+    expect(toneState.offlineCalls[0].transport.bpm.value).toBe(130);
   });
 
   it('rebuilds tracks and regions inside the offline context', async () => {
