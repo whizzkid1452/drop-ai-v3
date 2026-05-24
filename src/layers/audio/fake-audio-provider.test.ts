@@ -36,6 +36,24 @@ describe('FakeAudioProvider', () => {
     expect(duration).toBe(1);
   });
 
+  it('imports a file asset, records the call, and returns its duration', async () => {
+    const recorder = createCallRecorder();
+    const provider = new FakeAudioProvider({
+      recorder,
+      assetDurations: { 'asset-1': 4.5 },
+    });
+    const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
+
+    const result = await provider.importFileAsset('asset-1', file);
+
+    expect(result).toEqual({ duration: 4.5 });
+    expect(recorder.getCalls('importFileAsset')[0].args).toEqual([
+      'asset-1',
+      file,
+    ]);
+    await expect(provider.getAssetDuration('asset-1')).resolves.toBe(4.5);
+  });
+
   it('records track mixer calls with arguments', () => {
     const recorder = createCallRecorder();
     const provider = new FakeAudioProvider({ recorder });

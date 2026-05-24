@@ -3,6 +3,7 @@ import type { SessionState } from '@/layers/core/session/session-state';
 import type {
   AddAudioRegionInput,
   AudioProvider,
+  ImportFileAssetResult,
   LoopRange,
 } from './audio-provider';
 
@@ -97,6 +98,17 @@ export class FakeAudioProvider implements AudioProvider {
   async getAssetDuration(assetId: string): Promise<number> {
     this.record('getAssetDuration', [assetId]);
     return this.assetDurations[assetId] ?? DEFAULT_ASSET_DURATION_SECONDS;
+  }
+
+  async importFileAsset(
+    assetId: string,
+    file: File
+  ): Promise<ImportFileAssetResult> {
+    this.record('importFileAsset', [assetId, file]);
+    const duration =
+      this.assetDurations[assetId] ?? DEFAULT_ASSET_DURATION_SECONDS;
+    this.assetDurations[assetId] = duration;
+    return { duration };
   }
 
   async exportSession(
