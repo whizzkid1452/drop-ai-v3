@@ -7,7 +7,6 @@ const DEFAULT_TRACK_PAN = 0;
 export interface AddTrackInput {
   trackId: string;
   name: string;
-  now: string;
 }
 
 export function addTrack(
@@ -32,14 +31,11 @@ export function addTrack(
       ...state.tracksById,
       [input.trackId]: newTrack,
     },
-    dirty: true,
-    updatedAt: input.now,
   };
 }
 
 export interface RemoveTrackInput {
   trackId: string;
-  now: string;
 }
 
 export function removeTrack(
@@ -56,15 +52,12 @@ export function removeTrack(
     ...state,
     trackOrder: state.trackOrder.filter(id => id !== input.trackId),
     tracksById: remainingTracks,
-    dirty: true,
-    updatedAt: input.now,
   };
 }
 
 function updateTrack(
   state: SessionState,
   trackId: string,
-  now: string,
   patch: (track: TrackState) => TrackState
 ): SessionState {
   const existingTrack = state.tracksById[trackId];
@@ -78,22 +71,19 @@ function updateTrack(
       ...state.tracksById,
       [trackId]: patch(existingTrack),
     },
-    dirty: true,
-    updatedAt: now,
   };
 }
 
 export interface SetTrackVolumeInput {
   trackId: string;
   volume: number;
-  now: string;
 }
 
 export function setTrackVolume(
   state: SessionState,
   input: SetTrackVolumeInput
 ): SessionState {
-  return updateTrack(state, input.trackId, input.now, track => ({
+  return updateTrack(state, input.trackId, track => ({
     ...track,
     volume: input.volume,
   }));
@@ -102,14 +92,13 @@ export function setTrackVolume(
 export interface SetTrackMuteInput {
   trackId: string;
   muted: boolean;
-  now: string;
 }
 
 export function setTrackMute(
   state: SessionState,
   input: SetTrackMuteInput
 ): SessionState {
-  return updateTrack(state, input.trackId, input.now, track => ({
+  return updateTrack(state, input.trackId, track => ({
     ...track,
     muted: input.muted,
   }));
@@ -118,14 +107,13 @@ export function setTrackMute(
 export interface SetTrackSoloInput {
   trackId: string;
   soloed: boolean;
-  now: string;
 }
 
 export function setTrackSolo(
   state: SessionState,
   input: SetTrackSoloInput
 ): SessionState {
-  return updateTrack(state, input.trackId, input.now, track => ({
+  return updateTrack(state, input.trackId, track => ({
     ...track,
     soloed: input.soloed,
   }));
@@ -134,14 +122,13 @@ export function setTrackSolo(
 export interface SetTrackPanInput {
   trackId: string;
   pan: number;
-  now: string;
 }
 
 export function setTrackPan(
   state: SessionState,
   input: SetTrackPanInput
 ): SessionState {
-  return updateTrack(state, input.trackId, input.now, track => ({
+  return updateTrack(state, input.trackId, track => ({
     ...track,
     pan: input.pan,
   }));
@@ -154,14 +141,13 @@ export interface AddRegionInput {
   startTime: number;
   duration: number;
   offset: number;
-  now: string;
 }
 
 export function addRegion(
   state: SessionState,
   input: AddRegionInput
 ): SessionState {
-  return updateTrack(state, input.trackId, input.now, track => ({
+  return updateTrack(state, input.trackId, track => ({
     ...track,
     regionOrder: [...track.regionOrder, input.regionId],
     regionsById: {
@@ -181,10 +167,9 @@ function updateRegion(
   state: SessionState,
   trackId: string,
   regionId: string,
-  now: string,
   patch: (region: RegionState) => RegionState
 ): SessionState {
-  return updateTrack(state, trackId, now, track => {
+  return updateTrack(state, trackId, track => {
     const existingRegion = track.regionsById[regionId];
     if (!existingRegion) {
       throw new RegionNotFoundError(trackId, regionId);
@@ -203,7 +188,6 @@ export interface MoveRegionInput {
   trackId: string;
   regionId: string;
   startTime: number;
-  now: string;
 }
 
 export function moveRegion(
@@ -214,7 +198,6 @@ export function moveRegion(
     state,
     input.trackId,
     input.regionId,
-    input.now,
     region => ({ ...region, startTime: input.startTime })
   );
 }
@@ -223,7 +206,6 @@ export interface ResizeRegionInput {
   trackId: string;
   regionId: string;
   duration: number;
-  now: string;
 }
 
 export function resizeRegion(
@@ -237,7 +219,6 @@ export function resizeRegion(
     state,
     input.trackId,
     input.regionId,
-    input.now,
     region => ({ ...region, duration: input.duration })
   );
 }
@@ -245,14 +226,13 @@ export function resizeRegion(
 export interface RemoveRegionInput {
   trackId: string;
   regionId: string;
-  now: string;
 }
 
 export function removeRegion(
   state: SessionState,
   input: RemoveRegionInput
 ): SessionState {
-  return updateTrack(state, input.trackId, input.now, track => {
+  return updateTrack(state, input.trackId, track => {
     if (!(input.regionId in track.regionsById)) {
       throw new RegionNotFoundError(input.trackId, input.regionId);
     }
@@ -271,7 +251,6 @@ export interface SplitRegionInput {
   regionId: string;
   splitTime: number;
   newRegionId: string;
-  now: string;
 }
 
 export interface SetPlayingInput {
@@ -304,7 +283,6 @@ export function setPosition(
 
 export interface SetBpmInput {
   bpm: number;
-  now: string;
 }
 
 export function setBpm(state: SessionState, input: SetBpmInput): SessionState {
@@ -314,14 +292,11 @@ export function setBpm(state: SessionState, input: SetBpmInput): SessionState {
   return {
     ...state,
     playback: { ...state.playback, bpm: input.bpm },
-    dirty: true,
-    updatedAt: input.now,
   };
 }
 
 export interface SetMasterVolumeInput {
   volume: number;
-  now: string;
 }
 
 export function setMasterVolume(
@@ -334,8 +309,6 @@ export function setMasterVolume(
   return {
     ...state,
     playback: { ...state.playback, masterVolume: input.volume },
-    dirty: true,
-    updatedAt: input.now,
   };
 }
 
@@ -343,7 +316,6 @@ export interface SetLoopInput {
   start: number;
   end: number;
   enabled: boolean;
-  now: string;
 }
 
 export function setLoop(
@@ -361,8 +333,6 @@ export function setLoop(
       ...state.playback,
       loop: { start: input.start, end: input.end, enabled: input.enabled },
     },
-    dirty: true,
-    updatedAt: input.now,
   };
 }
 
@@ -370,7 +340,7 @@ export function splitRegion(
   state: SessionState,
   input: SplitRegionInput
 ): SessionState {
-  return updateTrack(state, input.trackId, input.now, track => {
+  return updateTrack(state, input.trackId, track => {
     const originalRegion = track.regionsById[input.regionId];
     if (!originalRegion) {
       throw new RegionNotFoundError(input.trackId, input.regionId);

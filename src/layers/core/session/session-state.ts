@@ -36,13 +36,10 @@ export interface SessionState {
   trackOrder: string[];
   tracksById: Record<string, TrackState>;
   playback: PlaybackState;
-  dirty: boolean;
-  updatedAt: string;
 }
 
 export interface CreateEmptySessionInput {
   id: string;
-  now: string;
 }
 
 const DEFAULT_BPM = 120;
@@ -68,7 +65,5 @@ export function createEmptySession(
         enabled: false,
       },
     },
-    dirty: false,
-    updatedAt: input.now,
   };
 }

@@ -20,11 +20,9 @@ import {
 import { RegionNotFoundError, TrackNotFoundError } from './session-errors';
 import { createEmptySession } from './session-state';
 
-const INITIAL_NOW = '2026-05-23T00:00:00.000Z';
-const NEXT_NOW = '2026-05-23T00:01:00.000Z';
 
 function freshSession() {
-  return createEmptySession({ id: 'session-1', now: INITIAL_NOW });
+  return createEmptySession({ id: 'session-1' });
 }
 
 describe('addTrack', () => {
@@ -34,7 +32,6 @@ describe('addTrack', () => {
     const result = addTrack(session, {
       trackId: 'track-1',
       name: 'Drums',
-      now: NEXT_NOW,
     });
 
     expect(result.trackOrder).toEqual(['track-1']);
@@ -46,7 +43,6 @@ describe('addTrack', () => {
     const result = addTrack(session, {
       trackId: 'track-1',
       name: 'Drums',
-      now: NEXT_NOW,
     });
 
     expect(result.tracksById['track-1']).toEqual({
@@ -65,34 +61,12 @@ describe('addTrack', () => {
     const session = freshSession();
     const snapshotBefore = JSON.parse(JSON.stringify(session));
 
-    addTrack(session, { trackId: 'track-1', name: 'Drums', now: NEXT_NOW });
+    addTrack(session, { trackId: 'track-1', name: 'Drums' });
 
     expect(session).toEqual(snapshotBefore);
   });
 
-  it('marks the resulting session dirty', () => {
-    const session = freshSession();
 
-    const result = addTrack(session, {
-      trackId: 'track-1',
-      name: 'Drums',
-      now: NEXT_NOW,
-    });
-
-    expect(result.dirty).toBe(true);
-  });
-
-  it('updates updatedAt to the provided now', () => {
-    const session = freshSession();
-
-    const result = addTrack(session, {
-      trackId: 'track-1',
-      name: 'Drums',
-      now: NEXT_NOW,
-    });
-
-    expect(result.updatedAt).toBe(NEXT_NOW);
-  });
 
   it('preserves order when adding multiple tracks', () => {
     const session = freshSession();
@@ -100,12 +74,10 @@ describe('addTrack', () => {
     const afterFirst = addTrack(session, {
       trackId: 'track-1',
       name: 'A',
-      now: NEXT_NOW,
     });
     const afterSecond = addTrack(afterFirst, {
       trackId: 'track-2',
       name: 'B',
-      now: NEXT_NOW,
     });
 
     expect(afterSecond.trackOrder).toEqual(['track-1', 'track-2']);
@@ -116,17 +88,14 @@ describe('removeTrack', () => {
   function sessionWithTwoTracks() {
     const base = createEmptySession({
       id: 'session-1',
-      now: INITIAL_NOW,
     });
     const afterFirst = addTrack(base, {
       trackId: 'track-1',
       name: 'A',
-      now: NEXT_NOW,
     });
     return addTrack(afterFirst, {
       trackId: 'track-2',
       name: 'B',
-      now: NEXT_NOW,
     });
   }
 
@@ -135,7 +104,6 @@ describe('removeTrack', () => {
 
     const result = removeTrack(session, {
       trackId: 'track-1',
-      now: NEXT_NOW,
     });
 
     expect(result.trackOrder).toEqual(['track-2']);
@@ -146,7 +114,6 @@ describe('removeTrack', () => {
 
     const result = removeTrack(session, {
       trackId: 'track-1',
-      now: NEXT_NOW,
     });
 
     expect(result.tracksById['track-1']).toBeUndefined();
@@ -157,37 +124,17 @@ describe('removeTrack', () => {
     const session = sessionWithTwoTracks();
 
     expect(() =>
-      removeTrack(session, { trackId: 'missing-track', now: NEXT_NOW })
+      removeTrack(session, { trackId: 'missing-track' })
     ).toThrow(TrackNotFoundError);
   });
 
-  it('marks the resulting session dirty', () => {
-    const session = sessionWithTwoTracks();
 
-    const result = removeTrack(session, {
-      trackId: 'track-1',
-      now: NEXT_NOW,
-    });
-
-    expect(result.dirty).toBe(true);
-  });
-
-  it('updates updatedAt to the provided now', () => {
-    const session = sessionWithTwoTracks();
-
-    const result = removeTrack(session, {
-      trackId: 'track-1',
-      now: NEXT_NOW,
-    });
-
-    expect(result.updatedAt).toBe(NEXT_NOW);
-  });
 
   it('does not mutate the input state', () => {
     const session = sessionWithTwoTracks();
     const snapshotBefore = JSON.parse(JSON.stringify(session));
 
-    removeTrack(session, { trackId: 'track-1', now: NEXT_NOW });
+    removeTrack(session, { trackId: 'track-1' });
 
     expect(session).toEqual(snapshotBefore);
   });
@@ -196,12 +143,10 @@ describe('removeTrack', () => {
 function sessionWithOneTrack() {
   const base = createEmptySession({
     id: 'session-1',
-    now: INITIAL_NOW,
   });
   return addTrack(base, {
     trackId: 'track-1',
     name: 'A',
-    now: NEXT_NOW,
   });
 }
 
@@ -212,24 +157,11 @@ describe('setTrackVolume', () => {
     const result = setTrackVolume(session, {
       trackId: 'track-1',
       volume: 0.5,
-      now: NEXT_NOW,
     });
 
     expect(result.tracksById['track-1'].volume).toBe(0.5);
   });
 
-  it('marks the resulting session dirty and updates updatedAt', () => {
-    const session = sessionWithOneTrack();
-
-    const result = setTrackVolume(session, {
-      trackId: 'track-1',
-      volume: 0.5,
-      now: NEXT_NOW,
-    });
-
-    expect(result.dirty).toBe(true);
-    expect(result.updatedAt).toBe(NEXT_NOW);
-  });
 
   it('throws TrackNotFoundError when the track does not exist', () => {
     const session = sessionWithOneTrack();
@@ -238,7 +170,6 @@ describe('setTrackVolume', () => {
       setTrackVolume(session, {
         trackId: 'missing',
         volume: 0.5,
-        now: NEXT_NOW,
       })
     ).toThrow(TrackNotFoundError);
   });
@@ -251,24 +182,11 @@ describe('setTrackMute', () => {
     const result = setTrackMute(session, {
       trackId: 'track-1',
       muted: true,
-      now: NEXT_NOW,
     });
 
     expect(result.tracksById['track-1'].muted).toBe(true);
   });
 
-  it('marks dirty and updates updatedAt', () => {
-    const session = sessionWithOneTrack();
-
-    const result = setTrackMute(session, {
-      trackId: 'track-1',
-      muted: true,
-      now: NEXT_NOW,
-    });
-
-    expect(result.dirty).toBe(true);
-    expect(result.updatedAt).toBe(NEXT_NOW);
-  });
 
   it('throws TrackNotFoundError on missing track', () => {
     const session = sessionWithOneTrack();
@@ -277,7 +195,6 @@ describe('setTrackMute', () => {
       setTrackMute(session, {
         trackId: 'missing',
         muted: true,
-        now: NEXT_NOW,
       })
     ).toThrow(TrackNotFoundError);
   });
@@ -290,7 +207,6 @@ describe('setTrackSolo', () => {
     const result = setTrackSolo(session, {
       trackId: 'track-1',
       soloed: true,
-      now: NEXT_NOW,
     });
 
     expect(result.tracksById['track-1'].soloed).toBe(true);
@@ -303,7 +219,6 @@ describe('setTrackSolo', () => {
       setTrackSolo(session, {
         trackId: 'missing',
         soloed: true,
-        now: NEXT_NOW,
       })
     ).toThrow(TrackNotFoundError);
   });
@@ -316,7 +231,6 @@ describe('setTrackPan', () => {
     const result = setTrackPan(session, {
       trackId: 'track-1',
       pan: -0.5,
-      now: NEXT_NOW,
     });
 
     expect(result.tracksById['track-1'].pan).toBe(-0.5);
@@ -329,7 +243,6 @@ describe('setTrackPan', () => {
       setTrackPan(session, {
         trackId: 'missing',
         pan: 0,
-        now: NEXT_NOW,
       })
     ).toThrow(TrackNotFoundError);
   });
@@ -348,7 +261,6 @@ describe('addRegion', () => {
       startTime,
       duration: 2,
       offset: 0,
-      now: NEXT_NOW,
     });
   }
 
@@ -381,17 +293,10 @@ describe('addRegion', () => {
         startTime: 0,
         duration: 2,
         offset: 0,
-        now: NEXT_NOW,
       })
     ).toThrow(TrackNotFoundError);
   });
 
-  it('marks the resulting session dirty and updates updatedAt', () => {
-    const result = addFirstRegion();
-
-    expect(result.dirty).toBe(true);
-    expect(result.updatedAt).toBe(NEXT_NOW);
-  });
 
   it('preserves order when adding multiple regions on the same track', () => {
     const afterFirst = addFirstRegion();
@@ -421,7 +326,6 @@ function sessionWithOneRegion() {
     startTime: 0,
     duration: 2,
     offset: 0,
-    now: NEXT_NOW,
   });
 }
 
@@ -433,7 +337,6 @@ describe('moveRegion', () => {
       trackId: 'track-1',
       regionId: 'region-1',
       startTime: 5,
-      now: NEXT_NOW,
     });
 
     expect(result.tracksById['track-1'].regionsById['region-1'].startTime).toBe(
@@ -441,19 +344,6 @@ describe('moveRegion', () => {
     );
   });
 
-  it('marks dirty and updates updatedAt', () => {
-    const session = sessionWithOneRegion();
-
-    const result = moveRegion(session, {
-      trackId: 'track-1',
-      regionId: 'region-1',
-      startTime: 5,
-      now: NEXT_NOW,
-    });
-
-    expect(result.dirty).toBe(true);
-    expect(result.updatedAt).toBe(NEXT_NOW);
-  });
 
   it('throws RegionNotFoundError when the region does not exist', () => {
     const session = sessionWithOneRegion();
@@ -463,7 +353,6 @@ describe('moveRegion', () => {
         trackId: 'track-1',
         regionId: 'missing-region',
         startTime: 5,
-        now: NEXT_NOW,
       })
     ).toThrow(RegionNotFoundError);
   });
@@ -476,7 +365,6 @@ describe('moveRegion', () => {
         trackId: 'missing-track',
         regionId: 'region-1',
         startTime: 5,
-        now: NEXT_NOW,
       })
     ).toThrow(TrackNotFoundError);
   });
@@ -490,7 +378,6 @@ describe('resizeRegion', () => {
       trackId: 'track-1',
       regionId: 'region-1',
       duration: 3,
-      now: NEXT_NOW,
     });
 
     expect(result.tracksById['track-1'].regionsById['region-1'].duration).toBe(
@@ -506,7 +393,6 @@ describe('resizeRegion', () => {
         trackId: 'track-1',
         regionId: 'region-1',
         duration: 0,
-        now: NEXT_NOW,
       })
     ).toThrow(/duration/);
   });
@@ -519,7 +405,6 @@ describe('resizeRegion', () => {
         trackId: 'track-1',
         regionId: 'missing-region',
         duration: 3,
-        now: NEXT_NOW,
       })
     ).toThrow(RegionNotFoundError);
   });
@@ -532,7 +417,6 @@ describe('removeRegion', () => {
     const result = removeRegion(session, {
       trackId: 'track-1',
       regionId: 'region-1',
-      now: NEXT_NOW,
     });
 
     expect(result.tracksById['track-1'].regionOrder).toEqual([]);
@@ -544,7 +428,6 @@ describe('removeRegion', () => {
     const result = removeRegion(session, {
       trackId: 'track-1',
       regionId: 'region-1',
-      now: NEXT_NOW,
     });
 
     expect(
@@ -559,23 +442,10 @@ describe('removeRegion', () => {
       removeRegion(session, {
         trackId: 'track-1',
         regionId: 'missing',
-        now: NEXT_NOW,
       })
     ).toThrow(RegionNotFoundError);
   });
 
-  it('marks dirty and updates updatedAt', () => {
-    const session = sessionWithOneRegion();
-
-    const result = removeRegion(session, {
-      trackId: 'track-1',
-      regionId: 'region-1',
-      now: NEXT_NOW,
-    });
-
-    expect(result.dirty).toBe(true);
-    expect(result.updatedAt).toBe(NEXT_NOW);
-  });
 });
 
 describe('splitRegion', () => {
@@ -587,7 +457,6 @@ describe('splitRegion', () => {
       startTime: 2,
       duration: 4,
       offset: 1,
-      now: NEXT_NOW,
     });
     return base;
   }
@@ -598,7 +467,6 @@ describe('splitRegion', () => {
       regionId: 'region-1',
       splitTime: 3,
       newRegionId: 'region-1-right',
-      now: NEXT_NOW,
     });
   }
 
@@ -636,7 +504,6 @@ describe('splitRegion', () => {
       startTime: 10,
       duration: 2,
       offset: 0,
-      now: NEXT_NOW,
     });
 
     const result = splitRegion(session, {
@@ -644,7 +511,6 @@ describe('splitRegion', () => {
       regionId: 'region-1',
       splitTime: 3,
       newRegionId: 'region-1-right',
-      now: NEXT_NOW,
     });
 
     expect(result.tracksById['track-1'].regionOrder).toEqual([
@@ -663,7 +529,6 @@ describe('splitRegion', () => {
         regionId: 'region-1',
         splitTime: 2,
         newRegionId: 'region-1-right',
-        now: NEXT_NOW,
       })
     ).toThrow(/split/i);
   });
@@ -677,7 +542,6 @@ describe('splitRegion', () => {
         regionId: 'region-1',
         splitTime: 6,
         newRegionId: 'region-1-right',
-        now: NEXT_NOW,
       })
     ).toThrow(/split/i);
   });
@@ -691,17 +555,10 @@ describe('splitRegion', () => {
         regionId: 'missing',
         splitTime: 3,
         newRegionId: 'region-1-right',
-        now: NEXT_NOW,
       })
     ).toThrow(RegionNotFoundError);
   });
 
-  it('marks the resulting session dirty and updates updatedAt', () => {
-    const result = splitAtThree();
-
-    expect(result.dirty).toBe(true);
-    expect(result.updatedAt).toBe(NEXT_NOW);
-  });
 });
 
 describe('setPlaying', () => {
@@ -713,21 +570,7 @@ describe('setPlaying', () => {
     expect(result.playback.playing).toBe(true);
   });
 
-  it('does NOT mark the session dirty', () => {
-    const session = freshSession();
 
-    const result = setPlaying(session, { playing: true });
-
-    expect(result.dirty).toBe(false);
-  });
-
-  it('does NOT change updatedAt', () => {
-    const session = freshSession();
-
-    const result = setPlaying(session, { playing: true });
-
-    expect(result.updatedAt).toBe(session.updatedAt);
-  });
 });
 
 describe('setPosition', () => {
@@ -739,38 +582,23 @@ describe('setPosition', () => {
     expect(result.playback.positionSeconds).toBe(3.5);
   });
 
-  it('does NOT mark the session dirty', () => {
-    const session = freshSession();
-
-    const result = setPosition(session, { positionSeconds: 3.5 });
-
-    expect(result.dirty).toBe(false);
-  });
 });
 
 describe('setBpm', () => {
   it('updates playback.bpm', () => {
     const session = freshSession();
 
-    const result = setBpm(session, { bpm: 140, now: NEXT_NOW });
+    const result = setBpm(session, { bpm: 140 });
 
     expect(result.playback.bpm).toBe(140);
   });
 
-  it('marks dirty and updates updatedAt', () => {
-    const session = freshSession();
-
-    const result = setBpm(session, { bpm: 140, now: NEXT_NOW });
-
-    expect(result.dirty).toBe(true);
-    expect(result.updatedAt).toBe(NEXT_NOW);
-  });
 
   it('rejects a non-positive bpm', () => {
     const session = freshSession();
 
-    expect(() => setBpm(session, { bpm: 0, now: NEXT_NOW })).toThrow(/bpm/i);
-    expect(() => setBpm(session, { bpm: -10, now: NEXT_NOW })).toThrow(/bpm/i);
+    expect(() => setBpm(session, { bpm: 0 })).toThrow(/bpm/i);
+    expect(() => setBpm(session, { bpm: -10 })).toThrow(/bpm/i);
   });
 });
 
@@ -778,28 +606,20 @@ describe('setMasterVolume', () => {
   it('updates playback.masterVolume', () => {
     const session = freshSession();
 
-    const result = setMasterVolume(session, { volume: 0.5, now: NEXT_NOW });
+    const result = setMasterVolume(session, { volume: 0.5 });
 
     expect(result.playback.masterVolume).toBe(0.5);
   });
 
-  it('marks dirty and updates updatedAt', () => {
-    const session = freshSession();
-
-    const result = setMasterVolume(session, { volume: 0.5, now: NEXT_NOW });
-
-    expect(result.dirty).toBe(true);
-    expect(result.updatedAt).toBe(NEXT_NOW);
-  });
 
   it('rejects a volume outside [0, 1]', () => {
     const session = freshSession();
 
     expect(() =>
-      setMasterVolume(session, { volume: -0.1, now: NEXT_NOW })
+      setMasterVolume(session, { volume: -0.1 })
     ).toThrow(/volume/i);
     expect(() =>
-      setMasterVolume(session, { volume: 1.5, now: NEXT_NOW })
+      setMasterVolume(session, { volume: 1.5 })
     ).toThrow(/volume/i);
   });
 });
@@ -812,7 +632,6 @@ describe('setLoop', () => {
       start: 1,
       end: 5,
       enabled: true,
-      now: NEXT_NOW,
     });
 
     expect(result.playback.loop).toEqual({
@@ -822,28 +641,15 @@ describe('setLoop', () => {
     });
   });
 
-  it('marks dirty and updates updatedAt', () => {
-    const session = freshSession();
-
-    const result = setLoop(session, {
-      start: 1,
-      end: 5,
-      enabled: true,
-      now: NEXT_NOW,
-    });
-
-    expect(result.dirty).toBe(true);
-    expect(result.updatedAt).toBe(NEXT_NOW);
-  });
 
   it('rejects when enabled and end <= start', () => {
     const session = freshSession();
 
     expect(() =>
-      setLoop(session, { start: 4, end: 4, enabled: true, now: NEXT_NOW })
+      setLoop(session, { start: 4, end: 4, enabled: true })
     ).toThrow(/loop/i);
     expect(() =>
-      setLoop(session, { start: 5, end: 2, enabled: true, now: NEXT_NOW })
+      setLoop(session, { start: 5, end: 2, enabled: true })
     ).toThrow(/loop/i);
   });
 
@@ -851,7 +657,7 @@ describe('setLoop', () => {
     const session = freshSession();
 
     expect(() =>
-      setLoop(session, { start: 5, end: 2, enabled: false, now: NEXT_NOW })
+      setLoop(session, { start: 5, end: 2, enabled: false })
     ).not.toThrow();
   });
 });

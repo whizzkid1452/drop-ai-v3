@@ -13,12 +13,6 @@ import {
   TrackNotFoundError,
 } from '@/layers/core/session/session-errors';
 
-const NOW = '2026-05-23T00:00:00.000Z';
-
-function fixedNow(): string {
-  return NOW;
-}
-
 function fixedIdGenerator(): IdGenerator {
   let trackCounter = 0;
   let regionCounter = 0;
@@ -46,7 +40,7 @@ interface Harness {
 
 function setup(): Harness {
   const store = createSessionStore({
-    initialSession: createEmptySession({ id: 'session-1', now: NOW }),
+    initialSession: createEmptySession({ id: 'session-1' }),
   });
   const recorder = createCallRecorder();
   const audio = new FakeAudioProvider({
@@ -57,7 +51,6 @@ function setup(): Harness {
     sessionStore: store,
     audioProvider: audio,
     idGenerator: fixedIdGenerator(),
-    now: fixedNow,
   });
   return { store, audio, recorder, controller };
 }

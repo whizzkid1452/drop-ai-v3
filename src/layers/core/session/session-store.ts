@@ -10,7 +10,6 @@ export interface SessionStore {
   getState(): SessionState;
   subscribe(listener: SessionListener): () => void;
   applyOperation(transform: (state: SessionState) => SessionState): void;
-  replaceState(next: SessionState): void;
 }
 
 export interface CreateSessionStoreOptions {
@@ -29,9 +28,6 @@ export function createSessionStore({
     subscribe: listener => store.subscribe(listener),
     applyOperation: transform => {
       store.setState(state => transform(state), true);
-    },
-    replaceState: next => {
-      store.setState(next, true);
     },
   };
 }

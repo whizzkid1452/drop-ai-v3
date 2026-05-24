@@ -8,8 +8,6 @@ import {
 import { createEmptySession } from '@/layers/core/session/session-state';
 import { createCallRecorder } from '@/layers/testing/call-recorder';
 
-const NOW = '2026-05-23T00:00:00.000Z';
-
 interface Harness {
   store: SessionStore;
   audio: FakeAudioProvider;
@@ -19,14 +17,13 @@ interface Harness {
 
 function setup(): Harness {
   const store = createSessionStore({
-    initialSession: createEmptySession({ id: 'session-1', now: NOW }),
+    initialSession: createEmptySession({ id: 'session-1' }),
   });
   const recorder = createCallRecorder();
   const audio = new FakeAudioProvider({ recorder });
   const controller = new PlaybackController({
     sessionStore: store,
     audioProvider: audio,
-    now: () => NOW,
   });
   return { store, audio, recorder, controller };
 }
@@ -101,18 +98,4 @@ describe('PlaybackController', () => {
     expect(h.recorder.getCalls('setMasterVolume')[0].args).toEqual([0.6]);
   });
 
-  it('handleSeek does NOT mark the session dirty', () => {
-    h.controller.handleSeek(2);
-    expect(h.store.getState().dirty).toBe(false);
-  });
-
-  it('handlePlay does NOT mark the session dirty', async () => {
-    await h.controller.handlePlay();
-    expect(h.store.getState().dirty).toBe(false);
-  });
-
-  it('handleBpm marks the session dirty (it is an edit)', () => {
-    h.controller.handleBpm(140);
-    expect(h.store.getState().dirty).toBe(true);
-  });
 });

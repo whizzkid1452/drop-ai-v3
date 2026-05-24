@@ -488,8 +488,6 @@ describe('ToneAudioProvider.exportSession', () => {
         masterVolume: 1,
         loop: { start: 0, end: 4, enabled: false },
       },
-      dirty: false,
-      updatedAt: '2026-05-23T00:00:00.000Z',
     };
   }
 

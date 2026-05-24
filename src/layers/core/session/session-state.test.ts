@@ -3,15 +3,13 @@ import { createEmptySession } from './session-state';
 
 const SESSION_FIXTURE = {
   id: 'session-1',
-  now: '2026-05-23T00:00:00.000Z',
 };
 
 describe('createEmptySession', () => {
-  it('returns a session with the provided id and updatedAt', () => {
+  it('returns a session with the provided id', () => {
     const session = createEmptySession(SESSION_FIXTURE);
 
     expect(session.id).toBe('session-1');
-    expect(session.updatedAt).toBe('2026-05-23T00:00:00.000Z');
   });
 
   it('starts with an empty trackOrder and empty tracksById', () => {
@@ -38,11 +36,5 @@ describe('createEmptySession', () => {
       end: 4,
       enabled: false,
     });
-  });
-
-  it('starts clean (dirty = false)', () => {
-    const session = createEmptySession(SESSION_FIXTURE);
-
-    expect(session.dirty).toBe(false);
   });
 });
