@@ -1,4 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ToneAudioBuffer } from 'tone';
+
+function fakeToneBuffer(duration: number): ToneAudioBuffer {
+  return { duration } as unknown as ToneAudioBuffer;
+}
 
 interface ChannelMock {
   toDestination: ReturnType<typeof vi.fn>;
@@ -33,7 +38,26 @@ interface OfflineRunRecord {
   playerInstancesAfter: PlayerMock[];
 }
 
-const toneState = {
+interface ToneState {
+  transport: {
+    start: ReturnType<typeof vi.fn>;
+    pause: ReturnType<typeof vi.fn>;
+    stop: ReturnType<typeof vi.fn>;
+    seconds: number;
+    bpm: { value: number };
+    loopStart: number;
+    loopEnd: number;
+    loop: boolean;
+    state: string;
+  };
+  destination: { volume: { value: number } };
+  channelInstances: ChannelMock[];
+  playerInstances: PlayerMock[];
+  offlineCalls: OfflineRunRecord[];
+  offlineSampleRate: number;
+}
+
+const toneState: ToneState = {
   transport: {
     start: vi.fn(),
     pause: vi.fn(),
@@ -46,9 +70,9 @@ const toneState = {
     state: 'stopped',
   },
   destination: { volume: { value: 0 } },
-  channelInstances: [] as ChannelMock[],
-  playerInstances: [] as PlayerMock[],
-  offlineCalls: [] as OfflineRunRecord[],
+  channelInstances: [],
+  playerInstances: [],
+  offlineCalls: [],
   offlineSampleRate: 44100,
 };
 
@@ -324,7 +348,7 @@ describe('ToneAudioProvider region wiring', () => {
   it('getAssetDuration returns the duration of a registered buffer', async () => {
     const { ToneAudioProvider } = await import('./tone-audio-provider');
     const provider = new ToneAudioProvider();
-    provider.registerBuffer(ASSET_ID, { duration: 4.2 });
+    provider.registerBuffer(ASSET_ID, fakeToneBuffer(4.2));
 
     const duration = await provider.getAssetDuration(ASSET_ID);
 
@@ -343,7 +367,7 @@ describe('ToneAudioProvider region wiring', () => {
   it('addRegion creates a Player, connects it to the track channel, and syncs at startTime/offset/duration', async () => {
     const { ToneAudioProvider } = await import('./tone-audio-provider');
     const provider = new ToneAudioProvider();
-    provider.registerBuffer(ASSET_ID, { duration: 4 });
+    provider.registerBuffer(ASSET_ID, fakeToneBuffer(4));
     provider.createTrack('track-1');
     const channel = toneState.channelInstances[0];
 
@@ -360,7 +384,7 @@ describe('ToneAudioProvider region wiring', () => {
   it('addRegion throws when the track does not exist', async () => {
     const { ToneAudioProvider } = await import('./tone-audio-provider');
     const provider = new ToneAudioProvider();
-    provider.registerBuffer(ASSET_ID, { duration: 4 });
+    provider.registerBuffer(ASSET_ID, fakeToneBuffer(4));
 
     expect(() => provider.addRegion(REGION_INPUT)).toThrow(/track/i);
   });
@@ -368,7 +392,7 @@ describe('ToneAudioProvider region wiring', () => {
   it('moveRegion unsyncs, stops, and restarts at new startTime preserving offset and duration', async () => {
     const { ToneAudioProvider } = await import('./tone-audio-provider');
     const provider = new ToneAudioProvider();
-    provider.registerBuffer(ASSET_ID, { duration: 4 });
+    provider.registerBuffer(ASSET_ID, fakeToneBuffer(4));
     provider.createTrack('track-1');
     provider.addRegion(REGION_INPUT);
     const player = toneState.playerInstances[0];
@@ -385,7 +409,7 @@ describe('ToneAudioProvider region wiring', () => {
   it('resizeRegion restarts the player with the new duration', async () => {
     const { ToneAudioProvider } = await import('./tone-audio-provider');
     const provider = new ToneAudioProvider();
-    provider.registerBuffer(ASSET_ID, { duration: 4 });
+    provider.registerBuffer(ASSET_ID, fakeToneBuffer(4));
     provider.createTrack('track-1');
     provider.addRegion(REGION_INPUT);
     const player = toneState.playerInstances[0];
@@ -399,7 +423,7 @@ describe('ToneAudioProvider region wiring', () => {
   it('removeRegion disposes the player', async () => {
     const { ToneAudioProvider } = await import('./tone-audio-provider');
     const provider = new ToneAudioProvider();
-    provider.registerBuffer(ASSET_ID, { duration: 4 });
+    provider.registerBuffer(ASSET_ID, fakeToneBuffer(4));
     provider.createTrack('track-1');
     provider.addRegion(REGION_INPUT);
     const player = toneState.playerInstances[0];
@@ -412,7 +436,7 @@ describe('ToneAudioProvider region wiring', () => {
   it('removeTrack also disposes attached region players', async () => {
     const { ToneAudioProvider } = await import('./tone-audio-provider');
     const provider = new ToneAudioProvider();
-    provider.registerBuffer(ASSET_ID, { duration: 4 });
+    provider.registerBuffer(ASSET_ID, fakeToneBuffer(4));
     provider.createTrack('track-1');
     provider.addRegion(REGION_INPUT);
     const channel = toneState.channelInstances[0];
@@ -429,8 +453,8 @@ describe('ToneAudioProvider.syncSession', () => {
   async function setupWithBuffers() {
     const { ToneAudioProvider } = await import('./tone-audio-provider');
     const provider = new ToneAudioProvider();
-    provider.registerBuffer('asset-1', { duration: 4 });
-    provider.registerBuffer('asset-2', { duration: 3 });
+    provider.registerBuffer('asset-1', fakeToneBuffer(4));
+    provider.registerBuffer('asset-2', fakeToneBuffer(3));
     return provider;
   }
 
@@ -563,7 +587,7 @@ describe('ToneAudioProvider.exportSession', () => {
   async function makeProviderWithBuffers() {
     const { ToneAudioProvider } = await import('./tone-audio-provider');
     const provider = new ToneAudioProvider();
-    provider.registerBuffer('asset-1', { duration: 4 });
+    provider.registerBuffer('asset-1', fakeToneBuffer(4));
     return provider;
   }
 

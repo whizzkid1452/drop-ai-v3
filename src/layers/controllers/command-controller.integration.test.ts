@@ -15,6 +15,19 @@ import { createCallRecorder } from '@/layers/testing/call-recorder';
 
 const NOW = '2026-05-23T00:00:00.000Z';
 
+function isExportResultData(
+  value: unknown
+): value is { blob: Blob; filename: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'blob' in value &&
+    value.blob instanceof Blob &&
+    'filename' in value &&
+    typeof value.filename === 'string'
+  );
+}
+
 function fixedIdGenerator(): IdGenerator {
   const counters: Record<string, number> = {};
   return {
@@ -194,10 +207,9 @@ describe('command-controller integration: session.export', () => {
     const result = await h.app.executeCommand({ type: 'session.export' });
 
     expect(result.ok).toBe(true);
-    if (result.ok) {
-      const data = result.data as { blob: Blob; filename: string };
-      expect(data.blob).toBeInstanceOf(Blob);
-      expect(data.filename).toBe('session-1.wav');
+    if (result.ok && isExportResultData(result.data)) {
+      expect(result.data.blob).toBeInstanceOf(Blob);
+      expect(result.data.filename).toBe('session-1.wav');
     }
   });
 

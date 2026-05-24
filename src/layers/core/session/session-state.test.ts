@@ -4,7 +4,7 @@ import { createEmptySession } from './session-state';
 const SESSION_FIXTURE = {
   id: 'session-1',
   now: '2026-05-23T00:00:00.000Z',
-} as const;
+};
 
 describe('createEmptySession', () => {
   it('returns a session with the provided id and updatedAt', () => {
