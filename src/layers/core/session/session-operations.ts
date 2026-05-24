@@ -416,3 +416,22 @@ export function splitRegion(
     };
   });
 }
+
+export const sessionOps = {
+  addTrack,
+  removeTrack,
+  setTrackVolume,
+  setTrackMute,
+  setTrackSolo,
+  setTrackPan,
+  addRegion,
+  moveRegion,
+  resizeRegion,
+  removeRegion,
+  splitRegion,
+  setPlaying,
+  setPosition,
+  setBpm,
+  setMasterVolume,
+  setLoop,
+};

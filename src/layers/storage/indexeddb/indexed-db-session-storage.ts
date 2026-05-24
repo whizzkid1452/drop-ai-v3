@@ -70,10 +70,33 @@ export class IndexedDbSessionStorage implements SessionStorageProvider {
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readonly');
       const request = tx.objectStore(STORE_NAME).getAll();
-      request.onsuccess = () => resolve(request.result as SessionState[]);
+      request.onsuccess = () => {
+        const raw: unknown = request.result;
+        if (!Array.isArray(raw)) {
+          resolve([]);
+          return;
+        }
+        resolve(raw.filter(isSessionStateLike));
+      };
       request.onerror = () => reject(request.error);
     });
   }
+}
+
+function isSessionStateLike(value: unknown): value is SessionState {
+  if (typeof value !== 'object' || value === null) return false;
+  return (
+    'id' in value &&
+    typeof value.id === 'string' &&
+    'trackOrder' in value &&
+    Array.isArray(value.trackOrder) &&
+    'tracksById' in value &&
+    typeof value.tracksById === 'object' &&
+    'playback' in value &&
+    typeof value.playback === 'object' &&
+    'updatedAt' in value &&
+    typeof value.updatedAt === 'string'
+  );
 }
 
 function runTransaction(

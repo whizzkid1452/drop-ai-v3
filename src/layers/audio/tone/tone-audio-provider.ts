@@ -1,4 +1,11 @@
-import * as Tone from 'tone';
+import {
+  Channel,
+  Offline,
+  Player,
+  getDestination,
+  getTransport,
+  type ToneAudioBuffer,
+} from 'tone';
 import type { SessionState } from '@/layers/core/session/session-state';
 import type {
   AddAudioRegionInput,
@@ -7,16 +14,12 @@ import type {
 } from '../audio-provider';
 import { encodeWav } from '../wav-encoder';
 
-interface RegisteredBuffer {
-  duration: number;
-}
-
 interface TrackNode {
-  channel: ReturnType<typeof Tone.Channel.prototype.toDestination>;
+  channel: ReturnType<typeof Channel.prototype.toDestination>;
 }
 
 interface RegionNode {
-  player: Tone.Player;
+  player: Player;
   trackId: string;
   startTime: number;
   duration: number;
@@ -30,41 +33,41 @@ function unitToDb(volume: number): number {
 export class ToneAudioProvider implements AudioProvider {
   private readonly tracks = new Map<string, TrackNode>();
   private readonly regions = new Map<string, RegionNode>();
-  private readonly buffers = new Map<string, RegisteredBuffer>();
+  private readonly buffers = new Map<string, ToneAudioBuffer>();
 
-  registerBuffer(assetId: string, buffer: RegisteredBuffer): void {
+  registerBuffer(assetId: string, buffer: ToneAudioBuffer): void {
     this.buffers.set(assetId, buffer);
   }
 
   async play(): Promise<void> {
-    const transport = Tone.getTransport();
+    const transport = getTransport();
     if (transport.state !== 'started') {
       transport.start();
     }
   }
 
   pause(): void {
-    Tone.getTransport().pause();
+    getTransport().pause();
   }
 
   stop(): void {
-    Tone.getTransport().stop();
+    getTransport().stop();
   }
 
   seek(seconds: number): void {
-    Tone.getTransport().seconds = seconds;
+    getTransport().seconds = seconds;
   }
 
   setBpm(bpm: number): void {
-    Tone.getTransport().bpm.value = bpm;
+    getTransport().bpm.value = bpm;
   }
 
   setMasterVolume(volume: number): void {
-    Tone.getDestination().volume.value = unitToDb(volume);
+    getDestination().volume.value = unitToDb(volume);
   }
 
   setLoop(loop: LoopRange): void {
-    const transport = Tone.getTransport();
+    const transport = getTransport();
     transport.loopStart = loop.start;
     transport.loopEnd = loop.end;
     transport.loop = loop.enabled;
@@ -72,7 +75,7 @@ export class ToneAudioProvider implements AudioProvider {
 
   createTrack(trackId: string): void {
     if (this.tracks.has(trackId)) return;
-    const channel = new Tone.Channel().toDestination();
+    const channel = new Channel().toDestination();
     this.tracks.set(trackId, { channel });
   }
 
@@ -123,9 +126,7 @@ export class ToneAudioProvider implements AudioProvider {
       throw new Error(`Asset buffer not registered: ${input.assetId}`);
     }
 
-    const player = new Tone.Player(buffer as Tone.ToneAudioBuffer).connect(
-      trackNode.channel
-    );
+    const player = new Player(buffer).connect(trackNode.channel);
     player.sync().start(input.startTime, input.offset, input.duration);
 
     this.regions.set(input.regionId, {
@@ -174,15 +175,15 @@ export class ToneAudioProvider implements AudioProvider {
     durationSeconds: number,
     session: SessionState
   ): Promise<Blob> {
-    const currentBpm = Tone.getTransport().bpm.value;
+    const currentBpm = getTransport().bpm.value;
     const buffers = this.buffers;
 
-    const offlineBuffer = await Tone.Offline(({ transport }) => {
+    const offlineBuffer = await Offline(({ transport }) => {
       transport.bpm.value = currentBpm;
 
       for (const trackId of session.trackOrder) {
         const track = session.tracksById[trackId];
-        const channel = new Tone.Channel().toDestination();
+        const channel = new Channel().toDestination();
         channel.volume.value = unitToDb(track.volume);
         channel.mute = track.muted;
         channel.solo = track.soloed;
@@ -196,9 +197,7 @@ export class ToneAudioProvider implements AudioProvider {
               `Asset buffer not registered for export: ${region.assetId}`
             );
           }
-          const player = new Tone.Player(
-            buffer as Tone.ToneAudioBuffer
-          ).connect(channel);
+          const player = new Player(buffer).connect(channel);
           player.sync().start(region.startTime, region.offset, region.duration);
         }
       }

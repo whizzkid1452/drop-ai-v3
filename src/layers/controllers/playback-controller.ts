@@ -1,11 +1,5 @@
 import type { AudioProvider } from '@/layers/audio/audio-provider';
-import {
-  setBpm as setBpmOp,
-  setLoop as setLoopOp,
-  setMasterVolume as setMasterVolumeOp,
-  setPlaying as setPlayingOp,
-  setPosition as setPositionOp,
-} from '@/layers/core/session/session-operations';
+import { sessionOps } from '@/layers/core/session/session-operations';
 import type { SessionStore } from '@/layers/core/session/session-store';
 import type { PlaybackCommandTarget } from './command-controller';
 import type { NowProvider } from './now-provider';
@@ -29,30 +23,31 @@ export class PlaybackController implements PlaybackCommandTarget {
 
   async handlePlay(): Promise<void> {
     this.sessionStore.applyOperation(state =>
-      setPlayingOp(state, { playing: true })
+      sessionOps.setPlaying(state, { playing: true })
     );
     await this.audioProvider.play();
   }
 
   handlePause(): void {
     this.sessionStore.applyOperation(state =>
-      setPlayingOp(state, { playing: false })
+      sessionOps.setPlaying(state, { playing: false })
     );
     this.audioProvider.pause();
   }
 
   handleStop(): void {
     this.sessionStore.applyOperation(state =>
-      setPositionOp(setPlayingOp(state, { playing: false }), {
-        positionSeconds: 0,
-      })
+      sessionOps.setPosition(
+        sessionOps.setPlaying(state, { playing: false }),
+        { positionSeconds: 0 }
+      )
     );
     this.audioProvider.stop();
   }
 
   handleSeek(seconds: number): void {
     this.sessionStore.applyOperation(state =>
-      setPositionOp(state, { positionSeconds: seconds })
+      sessionOps.setPosition(state, { positionSeconds: seconds })
     );
     this.audioProvider.seek(seconds);
   }
@@ -60,21 +55,23 @@ export class PlaybackController implements PlaybackCommandTarget {
   handleLoop(start: number, end: number, enabled: boolean): void {
     const now = this.now();
     this.sessionStore.applyOperation(state =>
-      setLoopOp(state, { start, end, enabled, now })
+      sessionOps.setLoop(state, { start, end, enabled, now })
     );
     this.audioProvider.setLoop({ start, end, enabled });
   }
 
   handleBpm(bpm: number): void {
     const now = this.now();
-    this.sessionStore.applyOperation(state => setBpmOp(state, { bpm, now }));
+    this.sessionStore.applyOperation(state =>
+      sessionOps.setBpm(state, { bpm, now })
+    );
     this.audioProvider.setBpm(bpm);
   }
 
   handleMasterVolume(volume: number): void {
     const now = this.now();
     this.sessionStore.applyOperation(state =>
-      setMasterVolumeOp(state, { volume, now })
+      sessionOps.setMasterVolume(state, { volume, now })
     );
     this.audioProvider.setMasterVolume(volume);
   }
