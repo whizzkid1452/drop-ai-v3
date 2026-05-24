@@ -15,12 +15,17 @@ import {
 
 function fixedIdGenerator(): IdGenerator {
   let trackCounter = 0;
+  let assetCounter = 0;
   let regionCounter = 0;
   return {
     next(prefix) {
       if (prefix === 'track') {
         trackCounter += 1;
         return `track-${trackCounter}`;
+      }
+      if (prefix === 'asset') {
+        assetCounter += 1;
+        return `asset-${assetCounter}`;
       }
       if (prefix === 'region') {
         regionCounter += 1;
@@ -190,6 +195,52 @@ describe('TrackController.addRegionFromAsset', () => {
     await expect(
       controller.addRegionFromAsset('missing', 'asset-1', 0)
     ).rejects.toThrow(TrackNotFoundError);
+  });
+});
+
+describe('TrackController.addRegionFromFile', () => {
+  it('imports the file as an asset, updates session, then calls audio.addRegion', async () => {
+    const harness = setup();
+    await harness.controller.addTrack();
+    harness.recorder.reset();
+    const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
+
+    const result = await harness.controller.addRegionFromFile(
+      'track-1',
+      file,
+      1.5
+    );
+
+    expect(result).toEqual({ assetId: 'asset-1', regionId: 'region-1' });
+    const region =
+      harness.store.getState().tracksById['track-1'].regionsById['region-1'];
+    expect(region).toEqual({
+      id: 'region-1',
+      assetId: 'asset-1',
+      startTime: 1.5,
+      duration: 4,
+      offset: 0,
+    });
+
+    const methodOrder = harness.recorder.calls.map(call => call.method);
+    expect(methodOrder.indexOf('importFileAsset')).toBeGreaterThanOrEqual(0);
+    expect(methodOrder.indexOf('addRegion')).toBeGreaterThan(
+      methodOrder.indexOf('importFileAsset')
+    );
+    expect(harness.recorder.getCalls('importFileAsset')[0].args).toEqual([
+      'asset-1',
+      file,
+    ]);
+  });
+
+  it('throws TrackNotFoundError without importing the file when the track does not exist', async () => {
+    const harness = setup();
+    const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
+
+    await expect(
+      harness.controller.addRegionFromFile('missing', file, 0)
+    ).rejects.toThrow(TrackNotFoundError);
+    expect(harness.recorder.getCalls('importFileAsset')).toHaveLength(0);
   });
 });
 

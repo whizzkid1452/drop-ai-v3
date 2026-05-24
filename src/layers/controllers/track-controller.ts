@@ -1,4 +1,5 @@
 import type { AudioProvider } from '@/layers/audio/audio-provider';
+import { TrackNotFoundError } from '@/layers/core/session/session-errors';
 import { sessionOps } from '@/layers/core/session/session-operations';
 import type { SessionStore } from '@/layers/core/session/session-store';
 import type { TrackCommandTarget } from './command-controller';
@@ -74,29 +75,40 @@ export class TrackController implements TrackCommandTarget {
     assetId: string,
     startTime: number
   ): Promise<{ id: string }> {
+    this.assertTrackExists(trackId);
     const regionId = this.idGenerator.next('region');
     const duration = await this.audioProvider.getAssetDuration(assetId);
 
-    this.sessionStore.applyOperation(state =>
-      sessionOps.addRegion(state, {
-        trackId,
-        regionId,
-        assetId,
-        startTime,
-        duration,
-        offset: DEFAULT_REGION_OFFSET,
-      })
-    );
-    this.audioProvider.addRegion({
+    this.addRegionWithKnownDuration({
       trackId,
       regionId,
       assetId,
       startTime,
       duration,
-      offset: DEFAULT_REGION_OFFSET,
     });
 
     return { id: regionId };
+  }
+
+  async addRegionFromFile(
+    trackId: string,
+    file: File,
+    startTime: number
+  ): Promise<{ assetId: string; regionId: string }> {
+    this.assertTrackExists(trackId);
+    const assetId = this.idGenerator.next('asset');
+    const regionId = this.idGenerator.next('region');
+    const { duration } = await this.audioProvider.importFileAsset(assetId, file);
+
+    this.addRegionWithKnownDuration({
+      trackId,
+      regionId,
+      assetId,
+      startTime,
+      duration,
+    });
+
+    return { assetId, regionId };
   }
 
   moveRegion(trackId: string, regionId: string, startTime: number): void {
@@ -146,5 +158,38 @@ export class TrackController implements TrackCommandTarget {
     });
 
     return { leftId: regionId, rightId: newRegionId };
+  }
+
+  private assertTrackExists(trackId: string): void {
+    if (!this.sessionStore.getState().tracksById[trackId]) {
+      throw new TrackNotFoundError(trackId);
+    }
+  }
+
+  private addRegionWithKnownDuration(input: {
+    trackId: string;
+    regionId: string;
+    assetId: string;
+    startTime: number;
+    duration: number;
+  }): void {
+    this.sessionStore.applyOperation(state =>
+      sessionOps.addRegion(state, {
+        trackId: input.trackId,
+        regionId: input.regionId,
+        assetId: input.assetId,
+        startTime: input.startTime,
+        duration: input.duration,
+        offset: DEFAULT_REGION_OFFSET,
+      })
+    );
+    this.audioProvider.addRegion({
+      trackId: input.trackId,
+      regionId: input.regionId,
+      assetId: input.assetId,
+      startTime: input.startTime,
+      duration: input.duration,
+      offset: DEFAULT_REGION_OFFSET,
+    });
   }
 }

@@ -31,6 +31,10 @@ describe('CommandController', () => {
       setTrackSolo: vi.fn(),
       setTrackPan: vi.fn(),
       addRegionFromAsset: vi.fn().mockResolvedValue({ id: 'region-1' }),
+      addRegionFromFile: vi.fn().mockResolvedValue({
+        assetId: 'asset-1',
+        regionId: 'region-1',
+      }),
       moveRegion: vi.fn(),
       splitRegion: vi.fn().mockReturnValue({
         leftId: 'region-1',

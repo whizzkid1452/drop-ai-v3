@@ -23,6 +23,11 @@ export interface TrackCommandTarget {
     assetId: string,
     startTime: number
   ): Promise<unknown>;
+  addRegionFromFile(
+    trackId: string,
+    file: File,
+    startTime: number
+  ): Promise<unknown>;
   moveRegion(trackId: string, regionId: string, startTime: number): void;
   splitRegion(trackId: string, regionId: string, splitTime: number): unknown;
   resizeRegion(trackId: string, regionId: string, duration: number): void;
