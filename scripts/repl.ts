@@ -47,8 +47,6 @@ Available commands:
     region resize <trackId> <regionId> <duration>
     region remove <trackId> <regionId>
   Session:
-    session save
-    session restore
     session export
   Special (REPL only):
     state   - print current session snapshot
@@ -61,7 +59,6 @@ async function main(): Promise<void> {
   const app = createApp({
     sessionId: 'repl-session',
     idGenerator: createCounterIdGenerator(),
-    autosave: { debounceMs: 500 },
   });
 
   const rl = createInterface({ input: stdin, output: stdout });

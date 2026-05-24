@@ -1,19 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AppController } from './app-controller';
 import { PlaybackController } from './playback-controller';
-import { SessionPersistenceController } from './session-persistence-controller';
+import { SessionExportController } from './session-export-controller';
 import { TrackController } from './track-controller';
 import type { IdGenerator } from './id-generator';
 import { FakeAudioProvider } from '@/layers/audio/fake-audio-provider';
-import { MemorySessionStorage } from '@/layers/storage/memory-session-storage';
 import {
   createSessionStore,
   type SessionStore,
 } from '@/layers/core/session/session-store';
 import { createEmptySession } from '@/layers/core/session/session-state';
 import { createCallRecorder } from '@/layers/testing/call-recorder';
-
-const NOW = '2026-05-23T00:00:00.000Z';
 
 function isExportResultData(
   value: unknown
@@ -41,47 +38,40 @@ function fixedIdGenerator(): IdGenerator {
 interface Harness {
   app: AppController;
   store: SessionStore;
-  storage: MemorySessionStorage;
-  audio: FakeAudioProvider;
 }
 
 function setup(): Harness {
   const store = createSessionStore({
-    initialSession: createEmptySession({ id: 'session-1', now: NOW }),
+    initialSession: createEmptySession({ id: 'session-1' }),
   });
   const recorder = createCallRecorder();
   const audio = new FakeAudioProvider({
     recorder,
     assetDurations: { 'asset-1': 4 },
   });
-  const storage = new MemorySessionStorage();
   const idGenerator = fixedIdGenerator();
-  const now = () => NOW;
 
   const track = new TrackController({
     sessionStore: store,
     audioProvider: audio,
     idGenerator,
-    now,
   });
   const playback = new PlaybackController({
     sessionStore: store,
     audioProvider: audio,
-    now,
   });
-  const persistence = new SessionPersistenceController({
+  const sessionExport = new SessionExportController({
     sessionStore: store,
-    storage,
     audioProvider: audio,
   });
 
   const app = new AppController({
     playbackController: playback,
     trackController: track,
-    sessionPersistenceController: persistence,
+    sessionExportController: sessionExport,
   });
 
-  return { app, store, storage, audio };
+  return { app, store };
 }
 
 describe('command-controller integration: result shapes', () => {
@@ -134,31 +124,6 @@ describe('command-controller integration: result shapes', () => {
     if (result.ok) {
       expect(result.data).toBeUndefined();
     }
-  });
-});
-
-describe('command-controller integration: dirty tracking', () => {
-  let h: Harness;
-  beforeEach(() => {
-    h = setup();
-  });
-
-  it('track.add marks the session dirty', async () => {
-    await h.app.executeCommand({ type: 'track.add' });
-    expect(h.store.getState().dirty).toBe(true);
-  });
-
-  it('session.save clears dirty', async () => {
-    await h.app.executeCommand({ type: 'track.add' });
-    expect(h.store.getState().dirty).toBe(true);
-
-    await h.app.executeCommand({ type: 'session.save' });
-    expect(h.store.getState().dirty).toBe(false);
-  });
-
-  it('playback.play does not mark the session dirty', async () => {
-    await h.app.executeCommand({ type: 'playback.play' });
-    expect(h.store.getState().dirty).toBe(false);
   });
 });
 
@@ -222,30 +187,5 @@ describe('command-controller integration: session.export', () => {
     if (!result.ok) {
       expect(result.error.code).toBe('COMMAND_EXECUTION_FAILED');
     }
-  });
-});
-
-describe('command-controller integration: end-to-end save/restore', () => {
-  it('persists tracks and regions through save and restores them into a fresh app', async () => {
-    const h = setup();
-    await h.app.executeCommand({ type: 'track.add' });
-    await h.app.executeCommand({
-      type: 'region.add',
-      payload: { trackId: 'track-1', assetId: 'asset-1', startTime: 0 },
-    });
-    await h.app.executeCommand({ type: 'session.save' });
-
-    const fresh = setup();
-    // share the storage by swapping in the original storage's snapshot
-    const snapshot = await h.storage.loadLatest();
-    if (!snapshot) throw new Error('expected saved snapshot');
-    await fresh.storage.save(snapshot);
-
-    await fresh.app.executeCommand({ type: 'session.restore' });
-
-    expect(fresh.store.getState().trackOrder).toEqual(['track-1']);
-    expect(
-      fresh.store.getState().tracksById['track-1'].regionOrder
-    ).toEqual(['region-1']);
   });
 });

@@ -2,9 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { runCli } from './cli-runner';
 import { createApp } from '@/layers/composition/create-app';
 import { FakeAudioProvider } from '@/layers/audio/fake-audio-provider';
-import { MemorySessionStorage } from '@/layers/storage/memory-session-storage';
-
-const NOW = '2026-05-23T00:00:00.000Z';
 
 function fixedIdGenerator() {
   const counters: Record<string, number> = {};
@@ -21,9 +18,7 @@ function setup() {
     audioProvider: new FakeAudioProvider({
       assetDurations: { 'asset-1': 4 },
     }),
-    storage: new MemorySessionStorage(),
     idGenerator: fixedIdGenerator(),
-    now: () => NOW,
     sessionId: 'session-1',
   });
 }
@@ -50,35 +45,21 @@ describe('runCli', () => {
     expect(app.sessionStore.getState().tracksById['track-1'].volume).toBe(0.5);
   });
 
-  it('"session save" persists snapshot to storage', async () => {
+  it('"session export" exports the current in-memory session', async () => {
     const app = setup();
     await runCli('track add', { appController: app.controller });
+    await runCli('region add track-1 asset-1 0', {
+      appController: app.controller,
+    });
 
-    const result = await runCli('session save', {
+    const result = await runCli('session export mix.wav', {
       appController: app.controller,
     });
 
     expect(result.ok).toBe(true);
-    const loaded = await app.storage.loadLatest();
-    expect(loaded?.trackOrder).toEqual(['track-1']);
-  });
-
-  it('"session restore" replaces store with loaded snapshot', async () => {
-    const app = setup();
-    await runCli('track add', { appController: app.controller });
-    await runCli('session save', { appController: app.controller });
-
-    const fresh = setup();
-    const snapshot = await app.storage.loadLatest();
-    if (!snapshot) throw new Error('expected snapshot');
-    await fresh.storage.save(snapshot);
-
-    const result = await runCli('session restore', {
-      appController: fresh.controller,
-    });
-
-    expect(result.ok).toBe(true);
-    expect(fresh.sessionStore.getState().trackOrder).toEqual(['track-1']);
+    if (result.ok) {
+      expect(result.data).toMatchObject({ filename: 'mix.wav' });
+    }
   });
 
   it('does not call any controller when the cli input is invalid', async () => {
