@@ -9,6 +9,10 @@ export interface AddAudioRegionInput {
   offset: number;
 }
 
+export interface ImportFileAssetResult {
+  duration: number;
+}
+
 export interface LoopRange {
   start: number;
   end: number;
@@ -38,5 +42,6 @@ export interface AudioProvider {
   resizeRegion(trackId: string, regionId: string, duration: number): void;
 
   getAssetDuration(assetId: string): Promise<number>;
+  importFileAsset(assetId: string, file: File): Promise<ImportFileAssetResult>;
   exportSession(durationSeconds: number, session: SessionState): Promise<Blob>;
 }
