@@ -91,14 +91,6 @@ describe('parseCliInput', () => {
   });
 
   it('maps session input to session commands', () => {
-    expect(parseCliInput('session save')).toEqual({
-      ok: true,
-      command: { type: 'session.save' },
-    });
-    expect(parseCliInput('session restore')).toEqual({
-      ok: true,
-      command: { type: 'session.restore' },
-    });
     expect(parseCliInput('session export final mix.wav')).toEqual({
       ok: true,
       command: {
