@@ -461,7 +461,11 @@ describe('ToneAudioEngine region wiring', () => {
     const player = toneState.playerInstances[0];
     player.start.mockClear();
 
-    provider.moveRegion('track-1', 'region-1', 7);
+    provider.moveRegion({
+      trackId: 'track-1',
+      regionId: 'region-1',
+      startTime: 7,
+    });
 
     expect(player.unsync).toHaveBeenCalled();
     expect(player.stop).toHaveBeenCalled();
@@ -478,7 +482,11 @@ describe('ToneAudioEngine region wiring', () => {
     const player = toneState.playerInstances[0];
     player.start.mockClear();
 
-    provider.resizeRegion('track-1', 'region-1', 1.5);
+    provider.resizeRegion({
+      trackId: 'track-1',
+      regionId: 'region-1',
+      duration: 1.5,
+    });
 
     expect(player.start).toHaveBeenCalledWith(2, 0.5, 1.5);
   });

@@ -9,6 +9,18 @@ export interface AddAudioRegionInput {
   offset: number;
 }
 
+export interface MoveAudioRegionInput {
+  trackId: string;
+  regionId: string;
+  startTime: number;
+}
+
+export interface ResizeAudioRegionInput {
+  trackId: string;
+  regionId: string;
+  duration: number;
+}
+
 export interface ImportFileAssetResult {
   duration: number;
 }
@@ -38,8 +50,8 @@ export interface IAudioEngine {
 
   addRegion(input: AddAudioRegionInput): void;
   removeRegion(trackId: string, regionId: string): void;
-  moveRegion(trackId: string, regionId: string, startTime: number): void;
-  resizeRegion(trackId: string, regionId: string, duration: number): void;
+  moveRegion(input: MoveAudioRegionInput): void;
+  resizeRegion(input: ResizeAudioRegionInput): void;
 
   getAssetDuration(assetId: string): Promise<number>;
   importFileAsset(assetId: string, file: File): Promise<ImportFileAssetResult>;

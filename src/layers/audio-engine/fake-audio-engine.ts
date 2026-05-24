@@ -5,6 +5,8 @@ import type {
   IAudioEngine,
   ImportFileAssetResult,
   LoopRange,
+  MoveAudioRegionInput,
+  ResizeAudioRegionInput,
 } from './audio-engine';
 
 const DEFAULT_ASSET_DURATION_SECONDS = 1;
@@ -87,11 +89,11 @@ export class FakeAudioEngine implements IAudioEngine {
     this.record('removeRegion', [trackId, regionId]);
   }
 
-  moveRegion(trackId: string, regionId: string, startTime: number): void {
+  moveRegion({ trackId, regionId, startTime }: MoveAudioRegionInput): void {
     this.record('moveRegion', [trackId, regionId, startTime]);
   }
 
-  resizeRegion(trackId: string, regionId: string, duration: number): void {
+  resizeRegion({ trackId, regionId, duration }: ResizeAudioRegionInput): void {
     this.record('resizeRegion', [trackId, regionId, duration]);
   }
 

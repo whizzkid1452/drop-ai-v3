@@ -11,6 +11,8 @@ import type {
   AddAudioRegionInput,
   IAudioEngine,
   LoopRange,
+  MoveAudioRegionInput,
+  ResizeAudioRegionInput,
 } from '../audio-engine';
 import { encodeWav } from '../wav-encoder';
 
@@ -145,7 +147,7 @@ export class ToneAudioEngine implements IAudioEngine {
     this.regions.delete(regionId);
   }
 
-  moveRegion(_trackId: string, regionId: string, startTime: number): void {
+  moveRegion({ regionId, startTime }: MoveAudioRegionInput): void {
     const region = this.regions.get(regionId);
     if (!region) return;
     region.player.unsync();
@@ -154,7 +156,7 @@ export class ToneAudioEngine implements IAudioEngine {
     region.startTime = startTime;
   }
 
-  resizeRegion(_trackId: string, regionId: string, duration: number): void {
+  resizeRegion({ regionId, duration }: ResizeAudioRegionInput): void {
     const region = this.regions.get(regionId);
     if (!region) return;
     region.player.unsync();

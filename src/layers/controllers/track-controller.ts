@@ -115,14 +115,14 @@ export class TrackController implements TrackCommandTarget {
     this.sessionStore.applyOperation((state) =>
       sessionOps.moveRegion(state, { trackId, regionId, startTime })
     );
-    this.audioEngine.moveRegion(trackId, regionId, startTime);
+    this.audioEngine.moveRegion({ trackId, regionId, startTime });
   }
 
   resizeRegion(trackId: string, regionId: string, duration: number): void {
     this.sessionStore.applyOperation((state) =>
       sessionOps.resizeRegion(state, { trackId, regionId, duration })
     );
-    this.audioEngine.resizeRegion(trackId, regionId, duration);
+    this.audioEngine.resizeRegion({ trackId, regionId, duration });
   }
 
   removeRegion(trackId: string, regionId: string): void {
@@ -152,7 +152,11 @@ export class TrackController implements TrackCommandTarget {
     const leftRegion = nextState.tracksById[trackId].regionsById[regionId];
     const rightRegion = nextState.tracksById[trackId].regionsById[newRegionId];
 
-    this.audioEngine.resizeRegion(trackId, regionId, leftRegion.duration);
+    this.audioEngine.resizeRegion({
+      trackId,
+      regionId,
+      duration: leftRegion.duration,
+    });
     this.audioEngine.addRegion({
       trackId,
       regionId: newRegionId,
