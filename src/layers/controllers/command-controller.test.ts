@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CommandController,
   type PlaybackCommandTarget,
-  type SessionPersistenceCommandTarget,
+  type SessionExportCommandTarget,
   type TrackCommandTarget,
 } from './command-controller';
 
 describe('CommandController', () => {
   let playbackController: PlaybackCommandTarget;
   let trackController: TrackCommandTarget;
-  let sessionPersistenceController: SessionPersistenceCommandTarget;
+  let sessionExportController: SessionExportCommandTarget;
   let commandController: CommandController;
 
   beforeEach(() => {
@@ -40,16 +40,14 @@ describe('CommandController', () => {
       removeRegion: vi.fn(),
     };
 
-    sessionPersistenceController = {
-      saveSession: vi.fn().mockResolvedValue(undefined),
-      restoreSession: vi.fn().mockResolvedValue(undefined),
+    sessionExportController = {
       exportSession: vi.fn().mockResolvedValue(undefined),
     };
 
     commandController = new CommandController(
       playbackController,
       trackController,
-      sessionPersistenceController
+      sessionExportController
     );
   });
 
@@ -183,19 +181,13 @@ describe('CommandController', () => {
     );
   });
 
-  it('dispatches session commands to SessionPersistenceController methods', async () => {
-    await commandController.execute({ type: 'session.save' });
-    await commandController.execute({ type: 'session.restore' });
+  it('dispatches session.export to SessionExportController', async () => {
     await commandController.execute({
       type: 'session.export',
       payload: { filename: 'mix.wav' },
     });
 
-    expect(sessionPersistenceController.saveSession).toHaveBeenCalledTimes(1);
-    expect(sessionPersistenceController.restoreSession).toHaveBeenCalledTimes(
-      1
-    );
-    expect(sessionPersistenceController.exportSession).toHaveBeenCalledWith(
+    expect(sessionExportController.exportSession).toHaveBeenCalledWith(
       'mix.wav'
     );
   });

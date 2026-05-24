@@ -203,18 +203,6 @@ const regionRemoveCommandSchema = z
   })
   .strict();
 
-const sessionSaveCommandSchema = z
-  .object({
-    type: z.literal('session.save'),
-  })
-  .strict();
-
-const sessionRestoreCommandSchema = z
-  .object({
-    type: z.literal('session.restore'),
-  })
-  .strict();
-
 const sessionExportCommandSchema = z
   .object({
     type: z.literal('session.export'),
@@ -246,8 +234,6 @@ export const commandSchema = z.discriminatedUnion('type', [
   regionSplitCommandSchema,
   regionResizeCommandSchema,
   regionRemoveCommandSchema,
-  sessionSaveCommandSchema,
-  sessionRestoreCommandSchema,
   sessionExportCommandSchema,
 ]);
 

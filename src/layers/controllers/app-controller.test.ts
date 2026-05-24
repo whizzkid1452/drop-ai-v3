@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppController } from './app-controller';
 import type {
   PlaybackCommandTarget,
-  SessionPersistenceCommandTarget,
+  SessionExportCommandTarget,
   TrackCommandTarget,
 } from './command-controller';
 
 describe('AppController', () => {
   let playbackController: PlaybackCommandTarget;
   let trackController: TrackCommandTarget;
-  let sessionPersistenceController: SessionPersistenceCommandTarget;
+  let sessionExportController: SessionExportCommandTarget;
 
   beforeEach(() => {
     playbackController = {
@@ -39,9 +39,7 @@ describe('AppController', () => {
       removeRegion: vi.fn(),
     };
 
-    sessionPersistenceController = {
-      saveSession: vi.fn().mockResolvedValue(undefined),
-      restoreSession: vi.fn().mockResolvedValue(undefined),
+    sessionExportController = {
       exportSession: vi.fn().mockResolvedValue(undefined),
     };
   });
@@ -50,21 +48,19 @@ describe('AppController', () => {
     const appController = new AppController({
       playbackController,
       trackController,
-      sessionPersistenceController,
+      sessionExportController,
     });
 
     expect(appController.playback).toBe(playbackController);
     expect(appController.track).toBe(trackController);
-    expect(appController.sessionPersistence).toBe(
-      sessionPersistenceController
-    );
+    expect(appController.sessionExport).toBe(sessionExportController);
   });
 
   it('executes commands through the unified command entry point', async () => {
     const appController = new AppController({
       playbackController,
       trackController,
-      sessionPersistenceController,
+      sessionExportController,
     });
 
     const result = await appController.executeCommand({ type: 'track.add' });
@@ -81,7 +77,7 @@ describe('AppController', () => {
     const appController = new AppController({
       playbackController,
       trackController,
-      sessionPersistenceController,
+      sessionExportController,
     });
 
     const result = await appController.executeCommand({

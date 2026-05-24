@@ -2,7 +2,7 @@ export { AppController, type AppControllerDependencies } from './app-controller'
 export {
   CommandController,
   type PlaybackCommandTarget,
-  type SessionPersistenceCommandTarget,
+  type SessionExportCommandTarget,
   type TrackCommandTarget,
 } from './command-controller';
 export { commandSchema, parseCommand, type AppCommand } from './command.schema';

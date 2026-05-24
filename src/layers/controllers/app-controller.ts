@@ -1,7 +1,7 @@
 import {
   CommandController,
   type PlaybackCommandTarget,
-  type SessionPersistenceCommandTarget,
+  type SessionExportCommandTarget,
   type TrackCommandTarget,
 } from './command-controller';
 import type { CommandResult } from './command-result';
@@ -9,27 +9,27 @@ import type { CommandResult } from './command-result';
 export interface AppControllerDependencies {
   playbackController: PlaybackCommandTarget;
   trackController: TrackCommandTarget;
-  sessionPersistenceController: SessionPersistenceCommandTarget;
+  sessionExportController: SessionExportCommandTarget;
 }
 
 export class AppController {
   public readonly playback: PlaybackCommandTarget;
   public readonly track: TrackCommandTarget;
-  public readonly sessionPersistence: SessionPersistenceCommandTarget;
+  public readonly sessionExport: SessionExportCommandTarget;
   public readonly command: CommandController;
 
   constructor({
     playbackController,
     trackController,
-    sessionPersistenceController,
+    sessionExportController,
   }: AppControllerDependencies) {
     this.playback = playbackController;
     this.track = trackController;
-    this.sessionPersistence = sessionPersistenceController;
+    this.sessionExport = sessionExportController;
     this.command = new CommandController(
       playbackController,
       trackController,
-      sessionPersistenceController
+      sessionExportController
     );
   }
 

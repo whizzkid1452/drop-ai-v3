@@ -105,12 +105,6 @@ describe('commandSchema', () => {
   });
 
   it('validates session commands', () => {
-    expect(commandSchema.safeParse({ type: 'session.save' }).success).toBe(
-      true
-    );
-    expect(commandSchema.safeParse({ type: 'session.restore' }).success).toBe(
-      true
-    );
     expect(
       commandSchema.safeParse({
         type: 'session.export',

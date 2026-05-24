@@ -29,9 +29,7 @@ export interface TrackCommandTarget {
   removeRegion(trackId: string, regionId: string): void;
 }
 
-export interface SessionPersistenceCommandTarget {
-  saveSession(): Promise<unknown>;
-  restoreSession(): Promise<unknown>;
+export interface SessionExportCommandTarget {
   exportSession(filename?: string): Promise<unknown>;
 }
 
@@ -39,7 +37,7 @@ export class CommandController {
   constructor(
     private readonly playbackController: PlaybackCommandTarget,
     private readonly trackController: TrackCommandTarget,
-    private readonly sessionPersistenceController: SessionPersistenceCommandTarget
+    private readonly sessionExportController: SessionExportCommandTarget
   ) {}
 
   public async execute(rawCommand: unknown): Promise<CommandResult> {
@@ -177,14 +175,8 @@ export class CommandController {
         );
         return undefined;
 
-      case 'session.save':
-        return await this.sessionPersistenceController.saveSession();
-
-      case 'session.restore':
-        return await this.sessionPersistenceController.restoreSession();
-
       case 'session.export':
-        return await this.sessionPersistenceController.exportSession(
+        return await this.sessionExportController.exportSession(
           command.payload?.filename
         );
     }
