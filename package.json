@@ -19,7 +19,12 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "worktree:add": "node scripts/worktree.mjs add external",
+    "worktree:add:internal": "node scripts/worktree.mjs add internal",
+    "worktree:remove": "node scripts/worktree.mjs remove external",
+    "worktree:remove:internal": "node scripts/worktree.mjs remove internal",
+    "worktree:list": "git worktree list"
   },
   "dependencies": {
     "tone": "^15.1.22",

@@ -5,13 +5,7 @@ import globals from 'globals';
 
 export default ts.config(
   {
-    ignores: [
-      'dist',
-      'node_modules',
-      'coverage',
-      '*.config.js',
-      'docs/**',
-    ],
+    ignores: ['dist', 'node_modules', 'coverage', '*.config.js', 'docs/**'],
   },
   js.configs.recommended,
   ...ts.configs.recommended,
@@ -38,7 +32,12 @@ export default ts.config(
     },
   },
   {
-    files: ['scripts/**/*.{ts,tsx}'],
+    files: ['scripts/**/*.{js,mjs,cjs,ts,tsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
     rules: {
       'no-console': 'off',
     },
