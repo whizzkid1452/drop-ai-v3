@@ -2,7 +2,14 @@ import type { IAudioEngine } from '@/layers/audio-engine/audio-engine';
 import { TrackNotFoundError } from '@/layers/session/session-errors';
 import { sessionOps } from '@/layers/session/session-operations';
 import type { ISessionStore } from '@/layers/session/session-store';
-import type { TrackCommandTarget } from './command-controller';
+import type {
+  AddRegionFromAssetInput,
+  AddRegionFromFileInput,
+  MoveRegionInput,
+  ResizeRegionInput,
+  SplitRegionInput,
+  TrackCommandTarget,
+} from './command-controller';
 import type { IdGenerator } from './id-generator';
 
 const DEFAULT_REGION_OFFSET = 0;
@@ -70,11 +77,11 @@ export class TrackController implements TrackCommandTarget {
     this.audioEngine.setTrackPan(trackId, pan);
   }
 
-  async addRegionFromAsset(
-    trackId: string,
-    assetId: string,
-    startTime: number
-  ): Promise<{ id: string }> {
+  async addRegionFromAsset({
+    trackId,
+    assetId,
+    startTime,
+  }: AddRegionFromAssetInput): Promise<{ id: string }> {
     this.assertTrackExists(trackId);
     const regionId = this.idGenerator.next('region');
     const duration = await this.audioEngine.getAssetDuration(assetId);
@@ -90,11 +97,11 @@ export class TrackController implements TrackCommandTarget {
     return { id: regionId };
   }
 
-  async addRegionFromFile(
-    trackId: string,
-    file: File,
-    startTime: number
-  ): Promise<{ assetId: string; regionId: string }> {
+  async addRegionFromFile({
+    trackId,
+    file,
+    startTime,
+  }: AddRegionFromFileInput): Promise<{ assetId: string; regionId: string }> {
     this.assertTrackExists(trackId);
     const assetId = this.idGenerator.next('asset');
     const regionId = this.idGenerator.next('region');
@@ -111,14 +118,14 @@ export class TrackController implements TrackCommandTarget {
     return { assetId, regionId };
   }
 
-  moveRegion(trackId: string, regionId: string, startTime: number): void {
+  moveRegion({ trackId, regionId, startTime }: MoveRegionInput): void {
     this.sessionStore.applyOperation((state) =>
       sessionOps.moveRegion(state, { trackId, regionId, startTime })
     );
     this.audioEngine.moveRegion({ trackId, regionId, startTime });
   }
 
-  resizeRegion(trackId: string, regionId: string, duration: number): void {
+  resizeRegion({ trackId, regionId, duration }: ResizeRegionInput): void {
     this.sessionStore.applyOperation((state) =>
       sessionOps.resizeRegion(state, { trackId, regionId, duration })
     );
@@ -132,11 +139,10 @@ export class TrackController implements TrackCommandTarget {
     this.audioEngine.removeRegion(trackId, regionId);
   }
 
-  splitRegion(
-    trackId: string,
-    regionId: string,
-    splitTime: number
-  ): { leftId: string; rightId: string } {
+  splitRegion({ trackId, regionId, splitTime }: SplitRegionInput): {
+    leftId: string;
+    rightId: string;
+  } {
     const newRegionId = this.idGenerator.next('region');
 
     this.sessionStore.applyOperation((state) =>

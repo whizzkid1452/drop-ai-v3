@@ -90,7 +90,11 @@ describe('CommandController', () => {
 
     expect(playbackController.handlePlay).toHaveBeenCalledTimes(1);
     expect(playbackController.handleSeek).toHaveBeenCalledWith(3.5);
-    expect(playbackController.handleLoop).toHaveBeenCalledWith(1, 4, true);
+    expect(playbackController.handleLoop).toHaveBeenCalledWith({
+      start: 1,
+      end: 4,
+      enabled: true,
+    });
     expect(playbackController.handleBpm).toHaveBeenCalledWith(128);
     expect(playbackController.handleMasterVolume).toHaveBeenCalledWith(0.7);
   });
@@ -153,16 +157,16 @@ describe('CommandController', () => {
       payload: { trackId: 'track-1', regionId: 'region-1' },
     });
 
-    expect(trackController.addRegionFromAsset).toHaveBeenCalledWith(
-      'track-1',
-      'asset-1',
-      0
-    );
-    expect(trackController.moveRegion).toHaveBeenCalledWith(
-      'track-1',
-      'region-1',
-      8
-    );
+    expect(trackController.addRegionFromAsset).toHaveBeenCalledWith({
+      trackId: 'track-1',
+      assetId: 'asset-1',
+      startTime: 0,
+    });
+    expect(trackController.moveRegion).toHaveBeenCalledWith({
+      trackId: 'track-1',
+      regionId: 'region-1',
+      startTime: 8,
+    });
     expect(splitResult).toEqual({
       ok: true,
       command: {
@@ -171,11 +175,11 @@ describe('CommandController', () => {
       },
       data: { leftId: 'region-1', rightId: 'region-2' },
     });
-    expect(trackController.resizeRegion).toHaveBeenCalledWith(
-      'track-1',
-      'region-1',
-      4
-    );
+    expect(trackController.resizeRegion).toHaveBeenCalledWith({
+      trackId: 'track-1',
+      regionId: 'region-1',
+      duration: 4,
+    });
     expect(trackController.removeRegion).toHaveBeenCalledWith(
       'track-1',
       'region-1'

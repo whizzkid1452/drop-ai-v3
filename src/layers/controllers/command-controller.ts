@@ -6,9 +6,45 @@ export interface PlaybackCommandTarget {
   handlePause(): void;
   handleStop(): void;
   handleSeek(seconds: number): void;
-  handleLoop(start: number, end: number, enabled: boolean): void;
+  handleLoop(input: PlaybackLoopInput): void;
   handleBpm(bpm: number): void;
   handleMasterVolume(volume: number): void;
+}
+
+export interface PlaybackLoopInput {
+  start: number;
+  end: number;
+  enabled: boolean;
+}
+
+export interface AddRegionFromAssetInput {
+  trackId: string;
+  assetId: string;
+  startTime: number;
+}
+
+export interface AddRegionFromFileInput {
+  trackId: string;
+  file: File;
+  startTime: number;
+}
+
+export interface MoveRegionInput {
+  trackId: string;
+  regionId: string;
+  startTime: number;
+}
+
+export interface SplitRegionInput {
+  trackId: string;
+  regionId: string;
+  splitTime: number;
+}
+
+export interface ResizeRegionInput {
+  trackId: string;
+  regionId: string;
+  duration: number;
 }
 
 export interface TrackCommandTarget {
@@ -18,19 +54,11 @@ export interface TrackCommandTarget {
   setTrackMute(trackId: string, muted: boolean): void;
   setTrackSolo(trackId: string, soloed: boolean): void;
   setTrackPan(trackId: string, pan: number): void;
-  addRegionFromAsset(
-    trackId: string,
-    assetId: string,
-    startTime: number
-  ): Promise<unknown>;
-  addRegionFromFile(
-    trackId: string,
-    file: File,
-    startTime: number
-  ): Promise<unknown>;
-  moveRegion(trackId: string, regionId: string, startTime: number): void;
-  splitRegion(trackId: string, regionId: string, splitTime: number): unknown;
-  resizeRegion(trackId: string, regionId: string, duration: number): void;
+  addRegionFromAsset(input: AddRegionFromAssetInput): Promise<unknown>;
+  addRegionFromFile(input: AddRegionFromFileInput): Promise<unknown>;
+  moveRegion(input: MoveRegionInput): void;
+  splitRegion(input: SplitRegionInput): unknown;
+  resizeRegion(input: ResizeRegionInput): void;
   removeRegion(trackId: string, regionId: string): void;
 }
 
@@ -93,11 +121,7 @@ export class CommandController {
         return undefined;
 
       case 'playback.loop.set':
-        this.playbackController.handleLoop(
-          command.payload.start,
-          command.payload.end,
-          command.payload.enabled
-        );
+        this.playbackController.handleLoop(command.payload);
         return undefined;
 
       case 'playback.bpm.set':
@@ -144,33 +168,17 @@ export class CommandController {
         return undefined;
 
       case 'region.add':
-        return await this.trackController.addRegionFromAsset(
-          command.payload.trackId,
-          command.payload.assetId,
-          command.payload.startTime
-        );
+        return await this.trackController.addRegionFromAsset(command.payload);
 
       case 'region.move':
-        this.trackController.moveRegion(
-          command.payload.trackId,
-          command.payload.regionId,
-          command.payload.startTime
-        );
+        this.trackController.moveRegion(command.payload);
         return undefined;
 
       case 'region.split':
-        return this.trackController.splitRegion(
-          command.payload.trackId,
-          command.payload.regionId,
-          command.payload.splitTime
-        );
+        return this.trackController.splitRegion(command.payload);
 
       case 'region.resize':
-        this.trackController.resizeRegion(
-          command.payload.trackId,
-          command.payload.regionId,
-          command.payload.duration
-        );
+        this.trackController.resizeRegion(command.payload);
         return undefined;
 
       case 'region.remove':

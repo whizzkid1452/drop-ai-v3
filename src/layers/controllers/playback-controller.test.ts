@@ -72,7 +72,7 @@ describe('PlaybackController', () => {
   });
 
   it('handleLoop updates session and audio', () => {
-    h.controller.handleLoop(1, 5, true);
+    h.controller.handleLoop({ start: 1, end: 5, enabled: true });
 
     expect(h.store.getState().playback.loop).toEqual({
       start: 1,

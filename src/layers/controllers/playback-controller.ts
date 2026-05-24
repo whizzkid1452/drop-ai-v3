@@ -1,7 +1,10 @@
 import type { IAudioEngine } from '@/layers/audio-engine/audio-engine';
 import { sessionOps } from '@/layers/session/session-operations';
 import type { ISessionStore } from '@/layers/session/session-store';
-import type { PlaybackCommandTarget } from './command-controller';
+import type {
+  PlaybackCommandTarget,
+  PlaybackLoopInput,
+} from './command-controller';
 
 export interface PlaybackControllerDependencies {
   sessionStore: ISessionStore;
@@ -47,7 +50,7 @@ export class PlaybackController implements PlaybackCommandTarget {
     this.audioEngine.seek(seconds);
   }
 
-  handleLoop(start: number, end: number, enabled: boolean): void {
+  handleLoop({ start, end, enabled }: PlaybackLoopInput): void {
     this.sessionStore.applyOperation((state) =>
       sessionOps.setLoop(state, { start, end, enabled })
     );

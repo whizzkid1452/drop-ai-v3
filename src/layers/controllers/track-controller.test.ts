@@ -165,11 +165,11 @@ describe('TrackController.addRegionFromAsset', () => {
     await harness.controller.addTrack();
     harness.recorder.reset();
 
-    const result = await harness.controller.addRegionFromAsset(
-      'track-1',
-      'asset-1',
-      2
-    );
+    const result = await harness.controller.addRegionFromAsset({
+      trackId: 'track-1',
+      assetId: 'asset-1',
+      startTime: 2,
+    });
 
     expect(result).toEqual({ id: 'region-1' });
     const region =
@@ -193,7 +193,11 @@ describe('TrackController.addRegionFromAsset', () => {
     const { controller } = setup();
 
     await expect(
-      controller.addRegionFromAsset('missing', 'asset-1', 0)
+      controller.addRegionFromAsset({
+        trackId: 'missing',
+        assetId: 'asset-1',
+        startTime: 0,
+      })
     ).rejects.toThrow(TrackNotFoundError);
   });
 });
@@ -205,11 +209,11 @@ describe('TrackController.addRegionFromFile', () => {
     harness.recorder.reset();
     const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
 
-    const result = await harness.controller.addRegionFromFile(
-      'track-1',
+    const result = await harness.controller.addRegionFromFile({
+      trackId: 'track-1',
       file,
-      1.5
-    );
+      startTime: 1.5,
+    });
 
     expect(result).toEqual({ assetId: 'asset-1', regionId: 'region-1' });
     const region =
@@ -238,7 +242,11 @@ describe('TrackController.addRegionFromFile', () => {
     const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
 
     await expect(
-      harness.controller.addRegionFromFile('missing', file, 0)
+      harness.controller.addRegionFromFile({
+        trackId: 'missing',
+        file,
+        startTime: 0,
+      })
     ).rejects.toThrow(TrackNotFoundError);
     expect(harness.recorder.getCalls('importFileAsset')).toHaveLength(0);
   });
@@ -250,12 +258,20 @@ describe('TrackController.moveRegion / resizeRegion / removeRegion', () => {
   beforeEach(async () => {
     harness = setup();
     await harness.controller.addTrack();
-    await harness.controller.addRegionFromAsset('track-1', 'asset-1', 0);
+    await harness.controller.addRegionFromAsset({
+      trackId: 'track-1',
+      assetId: 'asset-1',
+      startTime: 0,
+    });
     harness.recorder.reset();
   });
 
   it('moveRegion updates session and audio', () => {
-    harness.controller.moveRegion('track-1', 'region-1', 5);
+    harness.controller.moveRegion({
+      trackId: 'track-1',
+      regionId: 'region-1',
+      startTime: 5,
+    });
 
     expect(
       harness.store.getState().tracksById['track-1'].regionsById['region-1']
@@ -269,7 +285,11 @@ describe('TrackController.moveRegion / resizeRegion / removeRegion', () => {
   });
 
   it('resizeRegion updates session and audio', () => {
-    harness.controller.resizeRegion('track-1', 'region-1', 2);
+    harness.controller.resizeRegion({
+      trackId: 'track-1',
+      regionId: 'region-1',
+      duration: 2,
+    });
 
     expect(
       harness.store.getState().tracksById['track-1'].regionsById['region-1']
@@ -305,10 +325,18 @@ describe('TrackController.splitRegion', () => {
   it('returns { leftId, rightId }, resizes left in audio, and adds right in audio', async () => {
     const harness = setup();
     await harness.controller.addTrack();
-    await harness.controller.addRegionFromAsset('track-1', 'asset-1', 2);
+    await harness.controller.addRegionFromAsset({
+      trackId: 'track-1',
+      assetId: 'asset-1',
+      startTime: 2,
+    });
     harness.recorder.reset();
 
-    const result = harness.controller.splitRegion('track-1', 'region-1', 4);
+    const result = harness.controller.splitRegion({
+      trackId: 'track-1',
+      regionId: 'region-1',
+      splitTime: 4,
+    });
 
     expect(result).toEqual({ leftId: 'region-1', rightId: 'region-2' });
 
@@ -334,7 +362,11 @@ describe('TrackController.splitRegion', () => {
     await harness.controller.addTrack();
 
     expect(() =>
-      harness.controller.splitRegion('track-1', 'missing', 1)
+      harness.controller.splitRegion({
+        trackId: 'track-1',
+        regionId: 'missing',
+        splitTime: 1,
+      })
     ).toThrow(RegionNotFoundError);
   });
 });
