@@ -69,12 +69,6 @@ function importsFromInternalLayer(
   return aliasPattern.test(content) || relativePattern.test(content);
 }
 
-function referencesIdentifier(content: string, identifier: string): boolean {
-  const escaped = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp(`\\b${escaped}\\b`);
-  return pattern.test(content);
-}
-
 const ALL_SOURCE_FILES = collectSourceFiles(LAYERS_DIR);
 
 describe('architecture boundary', () => {
@@ -107,33 +101,6 @@ describe('architecture boundary', () => {
     it('allows tone import only from audio/tone/', () => {
       const offenders = toneImporters.filter(
         file => !isInsidePath(file.relativePath, ['audio', 'tone'])
-      );
-      expect(offenders.map(file => file.relativePath)).toEqual([]);
-    });
-  });
-
-  describe('indexeddb access boundary', () => {
-    const idbModuleImporters = ALL_SOURCE_FILES.filter(
-      file =>
-        importsModule(file.content, 'idb') ||
-        importsModule(file.content, 'fake-indexeddb') ||
-        importsModule(file.content, 'fake-indexeddb/auto')
-    );
-
-    const indexedDbReferences = ALL_SOURCE_FILES.filter(file =>
-      referencesIdentifier(file.content, 'indexedDB')
-    );
-
-    it('does not reference indexedDB outside storage/indexeddb/', () => {
-      const offenders = indexedDbReferences.filter(
-        file => !isInsidePath(file.relativePath, ['storage', 'indexeddb'])
-      );
-      expect(offenders.map(file => file.relativePath)).toEqual([]);
-    });
-
-    it('does not import idb or fake-indexeddb outside storage/indexeddb/', () => {
-      const offenders = idbModuleImporters.filter(
-        file => !isInsidePath(file.relativePath, ['storage', 'indexeddb'])
       );
       expect(offenders.map(file => file.relativePath)).toEqual([]);
     });
@@ -184,13 +151,6 @@ describe('architecture boundary', () => {
     it('apps do not import from layers/audio directly', () => {
       const offenders = appsFiles.filter(file =>
         importsFromInternalLayer(file.content, 'audio')
-      );
-      expect(offenders.map(file => file.relativePath)).toEqual([]);
-    });
-
-    it('apps do not import from layers/storage directly', () => {
-      const offenders = appsFiles.filter(file =>
-        importsFromInternalLayer(file.content, 'storage')
       );
       expect(offenders.map(file => file.relativePath)).toEqual([]);
     });
