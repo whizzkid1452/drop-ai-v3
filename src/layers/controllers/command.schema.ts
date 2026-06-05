@@ -45,7 +45,7 @@ const playbackLoopCommandSchema = z
         enabled: z.boolean(),
       })
       .strict()
-      .refine(payload => !payload.enabled || payload.end > payload.start, {
+      .refine((payload) => !payload.enabled || payload.end > payload.start, {
         message: 'Loop end must be greater than loop start.',
         path: ['end'],
       }),
@@ -203,18 +203,6 @@ const regionRemoveCommandSchema = z
   })
   .strict();
 
-const sessionSaveCommandSchema = z
-  .object({
-    type: z.literal('session.save'),
-  })
-  .strict();
-
-const sessionRestoreCommandSchema = z
-  .object({
-    type: z.literal('session.restore'),
-  })
-  .strict();
-
 const sessionExportCommandSchema = z
   .object({
     type: z.literal('session.export'),
@@ -246,8 +234,6 @@ export const commandSchema = z.discriminatedUnion('type', [
   regionSplitCommandSchema,
   regionResizeCommandSchema,
   regionRemoveCommandSchema,
-  sessionSaveCommandSchema,
-  sessionRestoreCommandSchema,
   sessionExportCommandSchema,
 ]);
 

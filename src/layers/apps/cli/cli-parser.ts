@@ -343,21 +343,14 @@ function parseSession(args: string[]): CliParseResult {
   const [subcommand, ...rest] = args;
 
   switch (subcommand) {
-    case 'save':
-      return success({ type: 'session.save' });
-
-    case 'restore':
-      return success({ type: 'session.restore' });
-
     case 'export':
       return success({
         type: 'session.export',
-        payload:
-          rest.length > 0 ? { filename: rest.join(' ') } : undefined,
+        payload: rest.length > 0 ? { filename: rest.join(' ') } : undefined,
       });
 
     default:
-      return failure('Unknown session subcommand.');
+      return failure('Unknown session subcommand. Use "export".');
   }
 }
 

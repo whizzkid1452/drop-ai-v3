@@ -19,7 +19,7 @@ export function createCallRecorder(): CallRecorder {
       calls.push({ method, args });
     },
     getCalls(method) {
-      return calls.filter(call => call.method === method);
+      return calls.filter((call) => call.method === method);
     },
     reset() {
       calls.length = 0;

@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CommandController,
   type PlaybackCommandTarget,
-  type SessionPersistenceCommandTarget,
+  type SessionExportCommandTarget,
   type TrackCommandTarget,
 } from './command-controller';
 
 describe('CommandController', () => {
   let playbackController: PlaybackCommandTarget;
   let trackController: TrackCommandTarget;
-  let sessionPersistenceController: SessionPersistenceCommandTarget;
+  let sessionExportController: SessionExportCommandTarget;
   let commandController: CommandController;
 
   beforeEach(() => {
@@ -31,6 +31,10 @@ describe('CommandController', () => {
       setTrackSolo: vi.fn(),
       setTrackPan: vi.fn(),
       addRegionFromAsset: vi.fn().mockResolvedValue({ id: 'region-1' }),
+      addRegionFromFile: vi.fn().mockResolvedValue({
+        assetId: 'asset-1',
+        regionId: 'region-1',
+      }),
       moveRegion: vi.fn(),
       splitRegion: vi.fn().mockReturnValue({
         leftId: 'region-1',
@@ -40,16 +44,14 @@ describe('CommandController', () => {
       removeRegion: vi.fn(),
     };
 
-    sessionPersistenceController = {
-      saveSession: vi.fn().mockResolvedValue(undefined),
-      restoreSession: vi.fn().mockResolvedValue(undefined),
+    sessionExportController = {
       exportSession: vi.fn().mockResolvedValue(undefined),
     };
 
     commandController = new CommandController(
       playbackController,
       trackController,
-      sessionPersistenceController
+      sessionExportController
     );
   });
 
@@ -88,7 +90,11 @@ describe('CommandController', () => {
 
     expect(playbackController.handlePlay).toHaveBeenCalledTimes(1);
     expect(playbackController.handleSeek).toHaveBeenCalledWith(3.5);
-    expect(playbackController.handleLoop).toHaveBeenCalledWith(1, 4, true);
+    expect(playbackController.handleLoop).toHaveBeenCalledWith({
+      start: 1,
+      end: 4,
+      enabled: true,
+    });
     expect(playbackController.handleBpm).toHaveBeenCalledWith(128);
     expect(playbackController.handleMasterVolume).toHaveBeenCalledWith(0.7);
   });
@@ -122,10 +128,7 @@ describe('CommandController', () => {
       data: { id: 'track-1' },
     });
     expect(trackController.addTrack).toHaveBeenCalledTimes(1);
-    expect(trackController.setTrackVolume).toHaveBeenCalledWith(
-      'track-1',
-      0.5
-    );
+    expect(trackController.setTrackVolume).toHaveBeenCalledWith('track-1', 0.5);
     expect(trackController.setTrackMute).toHaveBeenCalledWith('track-1', true);
     expect(trackController.setTrackSolo).toHaveBeenCalledWith('track-1', true);
     expect(trackController.setTrackPan).toHaveBeenCalledWith('track-1', -0.25);
@@ -154,16 +157,16 @@ describe('CommandController', () => {
       payload: { trackId: 'track-1', regionId: 'region-1' },
     });
 
-    expect(trackController.addRegionFromAsset).toHaveBeenCalledWith(
-      'track-1',
-      'asset-1',
-      0
-    );
-    expect(trackController.moveRegion).toHaveBeenCalledWith(
-      'track-1',
-      'region-1',
-      8
-    );
+    expect(trackController.addRegionFromAsset).toHaveBeenCalledWith({
+      trackId: 'track-1',
+      assetId: 'asset-1',
+      startTime: 0,
+    });
+    expect(trackController.moveRegion).toHaveBeenCalledWith({
+      trackId: 'track-1',
+      regionId: 'region-1',
+      startTime: 8,
+    });
     expect(splitResult).toEqual({
       ok: true,
       command: {
@@ -172,30 +175,24 @@ describe('CommandController', () => {
       },
       data: { leftId: 'region-1', rightId: 'region-2' },
     });
-    expect(trackController.resizeRegion).toHaveBeenCalledWith(
-      'track-1',
-      'region-1',
-      4
-    );
+    expect(trackController.resizeRegion).toHaveBeenCalledWith({
+      trackId: 'track-1',
+      regionId: 'region-1',
+      duration: 4,
+    });
     expect(trackController.removeRegion).toHaveBeenCalledWith(
       'track-1',
       'region-1'
     );
   });
 
-  it('dispatches session commands to SessionPersistenceController methods', async () => {
-    await commandController.execute({ type: 'session.save' });
-    await commandController.execute({ type: 'session.restore' });
+  it('dispatches session.export to SessionExportController', async () => {
     await commandController.execute({
       type: 'session.export',
       payload: { filename: 'mix.wav' },
     });
 
-    expect(sessionPersistenceController.saveSession).toHaveBeenCalledTimes(1);
-    expect(sessionPersistenceController.restoreSession).toHaveBeenCalledTimes(
-      1
-    );
-    expect(sessionPersistenceController.exportSession).toHaveBeenCalledWith(
+    expect(sessionExportController.exportSession).toHaveBeenCalledWith(
       'mix.wav'
     );
   });

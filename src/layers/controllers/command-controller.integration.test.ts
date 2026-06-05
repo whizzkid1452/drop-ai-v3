@@ -1,0 +1,191 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { AppController } from './app-controller';
+import { PlaybackController } from './playback-controller';
+import { SessionExportController } from './session-export-controller';
+import { TrackController } from './track-controller';
+import type { IdGenerator } from './id-generator';
+import { FakeAudioEngine } from '@/layers/audio-engine/fake-audio-engine';
+import {
+  createSessionStore,
+  type ISessionStore,
+} from '@/layers/session/session-store';
+import { createEmptySession } from '@/layers/session/session-state';
+import { createCallRecorder } from '@/layers/testing/call-recorder';
+
+function isExportResultData(
+  value: unknown
+): value is { blob: Blob; filename: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'blob' in value &&
+    value.blob instanceof Blob &&
+    'filename' in value &&
+    typeof value.filename === 'string'
+  );
+}
+
+function fixedIdGenerator(): IdGenerator {
+  const counters: Record<string, number> = {};
+  return {
+    next(prefix = 'id') {
+      counters[prefix] = (counters[prefix] ?? 0) + 1;
+      return `${prefix}-${counters[prefix]}`;
+    },
+  };
+}
+
+interface Harness {
+  app: AppController;
+  store: ISessionStore;
+}
+
+function setup(): Harness {
+  const store = createSessionStore({
+    initialSession: createEmptySession({ id: 'session-1' }),
+  });
+  const recorder = createCallRecorder();
+  const audio = new FakeAudioEngine({
+    recorder,
+    assetDurations: { 'asset-1': 4 },
+  });
+  const idGenerator = fixedIdGenerator();
+
+  const track = new TrackController({
+    sessionStore: store,
+    audioEngine: audio,
+    idGenerator,
+  });
+  const playback = new PlaybackController({
+    sessionStore: store,
+    audioEngine: audio,
+  });
+  const sessionExport = new SessionExportController({
+    sessionStore: store,
+    audioEngine: audio,
+  });
+
+  const app = new AppController({
+    playbackController: playback,
+    trackController: track,
+    sessionExportController: sessionExport,
+  });
+
+  return { app, store };
+}
+
+describe('command-controller integration: result shapes', () => {
+  let h: Harness;
+  beforeEach(() => {
+    h = setup();
+  });
+
+  it('track.add returns data { id }', async () => {
+    const result = await h.app.executeCommand({ type: 'track.add' });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data).toEqual({ id: 'track-1' });
+    }
+  });
+
+  it('region.split returns data { leftId, rightId }', async () => {
+    await h.app.executeCommand({ type: 'track.add' });
+    await h.app.executeCommand({
+      type: 'region.add',
+      payload: { trackId: 'track-1', assetId: 'asset-1', startTime: 2 },
+    });
+
+    const result = await h.app.executeCommand({
+      type: 'region.split',
+      payload: {
+        trackId: 'track-1',
+        regionId: 'region-1',
+        splitTime: 4,
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data).toEqual({
+        leftId: 'region-1',
+        rightId: 'region-2',
+      });
+    }
+  });
+
+  it('track.volume.set returns ok without data', async () => {
+    await h.app.executeCommand({ type: 'track.add' });
+    const result = await h.app.executeCommand({
+      type: 'track.volume.set',
+      payload: { trackId: 'track-1', volume: 0.5 },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data).toBeUndefined();
+    }
+  });
+});
+
+describe('command-controller integration: validation vs execution failure', () => {
+  let h: Harness;
+  beforeEach(() => {
+    h = setup();
+  });
+
+  it('returns COMMAND_VALIDATION_FAILED when payload is invalid (volume out of range)', async () => {
+    await h.app.executeCommand({ type: 'track.add' });
+    const result = await h.app.executeCommand({
+      type: 'track.volume.set',
+      payload: { trackId: 'track-1', volume: 2 },
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe('COMMAND_VALIDATION_FAILED');
+    }
+  });
+
+  it('returns COMMAND_EXECUTION_FAILED when a known command targets a missing track', async () => {
+    const result = await h.app.executeCommand({
+      type: 'track.remove',
+      payload: { trackId: 'missing-track' },
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe('COMMAND_EXECUTION_FAILED');
+      expect(result.error.message).toMatch(/track/i);
+    }
+  });
+});
+
+describe('command-controller integration: session.export', () => {
+  it('returns a blob and filename when the session has at least one region', async () => {
+    const h = setup();
+    await h.app.executeCommand({ type: 'track.add' });
+    await h.app.executeCommand({
+      type: 'region.add',
+      payload: { trackId: 'track-1', assetId: 'asset-1', startTime: 0 },
+    });
+
+    const result = await h.app.executeCommand({ type: 'session.export' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok && isExportResultData(result.data)) {
+      expect(result.data.blob).toBeInstanceOf(Blob);
+      expect(result.data.filename).toBe('session-1.wav');
+    }
+  });
+
+  it('returns COMMAND_EXECUTION_FAILED when the session is empty', async () => {
+    const h = setup();
+
+    const result = await h.app.executeCommand({ type: 'session.export' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe('COMMAND_EXECUTION_FAILED');
+    }
+  });
+});

@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@9.12.2",
   "volta": {
     "node": "22.11.0",
     "pnpm": "9.12.2"
@@ -12,10 +13,21 @@
     "pnpm": ">=9.0.0"
   },
   "scripts": {
+    "build": "tsc -b",
     "test": "pnpm test:unit",
     "test:unit": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "worktree:add": "node scripts/worktree.mjs add external",
+    "worktree:add:internal": "node scripts/worktree.mjs add internal",
+    "worktree:remove": "node scripts/worktree.mjs remove external",
+    "worktree:remove:internal": "node scripts/worktree.mjs remove internal",
+    "worktree:list": "git worktree list"
   },
   "dependencies": {
     "tone": "^15.1.22",
@@ -23,9 +35,15 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^24.3.0",
+    "eslint": "^10.4.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.6.0",
     "jsdom": "^26.1.0",
+    "prettier": "^3.8.3",
     "typescript": "~5.8.3",
+    "typescript-eslint": "^8.59.4",
     "vite": "^7.1.2",
     "vitest": "^4.0.18"
   }
