@@ -155,27 +155,17 @@ describe('architecture boundary', () => {
       isInsideLayer(file.relativePath, 'controllers')
     );
 
-    function importsAudioEnginePath(
-      file: ScannedFile,
-      audioSubpath: string
-    ): boolean {
-      const target = `audio-engine/${audioSubpath}`;
+    function importsDisallowedAudioEnginePath(file: ScannedFile): boolean {
       return resolvedInternalImports(file).some(
         (specifier) =>
-          specifier === target || specifier.startsWith(`${target}/`)
+          specifier.startsWith('audio-engine/') &&
+          specifier !== 'audio-engine/audio-engine'
       );
     }
 
-    it('controllers do not import FakeAudioEngine', () => {
+    it('controllers import only the public audio-engine interface', () => {
       const offenders = controllerFiles.filter((file) =>
-        importsAudioEnginePath(file, 'fake-audio-engine')
-      );
-      expect(offenders.map((file) => file.relativePath)).toEqual([]);
-    });
-
-    it('controllers do not import from audio-engine/tone', () => {
-      const offenders = controllerFiles.filter((file) =>
-        importsAudioEnginePath(file, 'tone')
+        importsDisallowedAudioEnginePath(file)
       );
       expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
