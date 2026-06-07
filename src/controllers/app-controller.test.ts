@@ -48,16 +48,18 @@ describe('AppController', () => {
     };
   });
 
-  it('keeps app dependencies behind the controller facade', () => {
+  it('exposes only the unified command entry point', () => {
     const appController = new AppController({
       playbackController,
       trackController,
       sessionExportController,
     });
 
-    expect(appController.playback).toBe(playbackController);
-    expect(appController.track).toBe(trackController);
-    expect(appController.sessionExport).toBe(sessionExportController);
+    expect('executeCommand' in appController).toBe(true);
+    expect('command' in appController).toBe(false);
+    expect('playback' in appController).toBe(false);
+    expect('track' in appController).toBe(false);
+    expect('sessionExport' in appController).toBe(false);
   });
 
   it('executes commands through the unified command entry point', async () => {

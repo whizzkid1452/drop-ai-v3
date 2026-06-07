@@ -13,20 +13,14 @@ export interface AppControllerDependencies {
 }
 
 export class AppController {
-  public readonly playback: PlaybackCommandTarget;
-  public readonly track: TrackCommandTarget;
-  public readonly sessionExport: SessionExportCommandTarget;
-  public readonly command: CommandController;
+  readonly #command: CommandController;
 
   constructor({
     playbackController,
     trackController,
     sessionExportController,
   }: AppControllerDependencies) {
-    this.playback = playbackController;
-    this.track = trackController;
-    this.sessionExport = sessionExportController;
-    this.command = new CommandController(
+    this.#command = new CommandController(
       playbackController,
       trackController,
       sessionExportController
@@ -34,6 +28,6 @@ export class AppController {
   }
 
   public executeCommand(rawCommand: unknown): Promise<CommandResult> {
-    return this.command.execute(rawCommand);
+    return this.#command.execute(rawCommand);
   }
 }
