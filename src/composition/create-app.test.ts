@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { composeApp, createApp } from './create-app';
-import { FakeAudioEngine } from '@/layers/audio-engine/fake-audio-engine';
-import { createEmptySession } from '@/layers/session/session-state';
-import { createSessionStore } from '@/layers/session/session-store';
-import { createCallRecorder } from '@/layers/testing/call-recorder';
+import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
+import { createEmptySession } from '@/session/session-state';
+import { createSessionStore } from '@/session/session-store';
+import { createCallRecorder } from '@/testing/call-recorder';
 
 function createIdGenerator() {
   const counters: Record<string, number> = {};

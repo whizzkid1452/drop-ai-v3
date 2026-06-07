@@ -1,5 +1,5 @@
-import type { AppController } from '@/layers/controllers';
-import type { CommandResult } from '@/layers/controllers';
+import type { AppController } from '@/controllers';
+import type { CommandResult } from '@/controllers';
 import { parseCliInput } from './cli-parser';
 
 export interface RunCliDependencies {

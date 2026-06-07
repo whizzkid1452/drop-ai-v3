@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { PlaybackController } from './playback-controller';
-import { FakeAudioEngine } from '@/layers/audio-engine/fake-audio-engine';
+import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
 import {
   createSessionStore,
   type ISessionStore,
-} from '@/layers/session/session-store';
-import { createEmptySession } from '@/layers/session/session-state';
-import { createCallRecorder } from '@/layers/testing/call-recorder';
+} from '@/session/session-store';
+import { createEmptySession } from '@/session/session-state';
+import { createCallRecorder } from '@/testing/call-recorder';
 
 interface Harness {
   store: ISessionStore;

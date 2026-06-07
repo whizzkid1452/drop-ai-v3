@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FakeAudioEngine } from './fake-audio-engine';
-import { createCallRecorder } from '@/layers/testing/call-recorder';
+import { createCallRecorder } from '@/testing/call-recorder';
 
 describe('FakeAudioEngine', () => {
   it('records play, pause, stop calls in order', async () => {

@@ -1,5 +1,5 @@
-import type { CallRecorder } from '@/layers/testing/call-recorder';
-import type { SessionState } from '@/layers/session/session-state';
+import type { CallRecorder } from '@/testing/call-recorder';
+import type { SessionState } from '@/session/session-state';
 import type {
   AddAudioRegionInput,
   IAudioEngine,

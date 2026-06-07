@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { runCli } from './cli-runner';
-import { createApp } from '@/layers/composition/create-app';
-import { FakeAudioEngine } from '@/layers/audio-engine/fake-audio-engine';
+import { createApp } from '@/composition/create-app';
+import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
 
 function fixedIdGenerator() {
   const counters: Record<string, number> = {};

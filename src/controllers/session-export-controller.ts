@@ -1,6 +1,6 @@
-import type { IAudioEngine } from '@/layers/audio-engine/audio-engine';
-import type { SessionState, TrackState } from '@/layers/session/session-state';
-import type { ISessionStore } from '@/layers/session/session-store';
+import type { IAudioEngine } from '@/audio-engine/audio-engine';
+import type { SessionState, TrackState } from '@/session/session-state';
+import type { ISessionStore } from '@/session/session-store';
 import type { SessionExportCommandTarget } from './command-controller';
 
 export interface SessionExportControllerDependencies {

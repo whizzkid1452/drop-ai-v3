@@ -6,7 +6,7 @@ import {
   getDestination,
   getTransport,
 } from 'tone';
-import type { SessionState } from '@/layers/session/session-state';
+import type { SessionState } from '@/session/session-state';
 import type {
   AddAudioRegionInput,
   IAudioEngine,

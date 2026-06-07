@@ -1,6 +1,6 @@
-import type { IAudioEngine } from '@/layers/audio-engine/audio-engine';
-import { sessionOps } from '@/layers/session/session-operations';
-import type { ISessionStore } from '@/layers/session/session-store';
+import type { IAudioEngine } from '@/audio-engine/audio-engine';
+import { sessionOps } from '@/session/session-operations';
+import type { ISessionStore } from '@/session/session-store';
 import type {
   PlaybackCommandTarget,
   PlaybackLoopInput,

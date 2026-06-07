@@ -1,4 +1,4 @@
-import { commandSchema, type AppCommand } from '@/layers/controllers';
+import { commandSchema, type AppCommand } from '@/controllers';
 
 export type CliParseResult =
   | {

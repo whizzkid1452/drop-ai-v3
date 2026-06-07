@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { SessionExportController } from './session-export-controller';
-import { FakeAudioEngine } from '@/layers/audio-engine/fake-audio-engine';
+import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
 import {
   createSessionStore,
   type ISessionStore,
-} from '@/layers/session/session-store';
-import { createEmptySession } from '@/layers/session/session-state';
-import { addTrack } from '@/layers/session/session-operations';
-import { createCallRecorder } from '@/layers/testing/call-recorder';
+} from '@/session/session-store';
+import { createEmptySession } from '@/session/session-state';
+import { addTrack } from '@/session/session-operations';
+import { createCallRecorder } from '@/testing/call-recorder';
 
 interface Harness {
   store: ISessionStore;

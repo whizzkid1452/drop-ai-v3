@@ -1,7 +1,7 @@
-import type { IAudioEngine } from '@/layers/audio-engine/audio-engine';
-import { TrackNotFoundError } from '@/layers/session/session-errors';
-import { sessionOps } from '@/layers/session/session-operations';
-import type { ISessionStore } from '@/layers/session/session-store';
+import type { IAudioEngine } from '@/audio-engine/audio-engine';
+import { TrackNotFoundError } from '@/session/session-errors';
+import { sessionOps } from '@/session/session-operations';
+import type { ISessionStore } from '@/session/session-store';
 import type {
   AddRegionFromAssetInput,
   AddRegionFromFileInput,

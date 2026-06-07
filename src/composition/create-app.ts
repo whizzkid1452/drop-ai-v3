@@ -1,19 +1,19 @@
-import type { IAudioEngine } from '@/layers/audio-engine/audio-engine';
-import { FakeAudioEngine } from '@/layers/audio-engine/fake-audio-engine';
-import { AppController } from '@/layers/controllers/app-controller';
+import type { IAudioEngine } from '@/audio-engine/audio-engine';
+import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
+import { AppController } from '@/controllers/app-controller';
 import {
   createUuidGenerator,
   type IdGenerator,
-} from '@/layers/controllers/id-generator';
-import { PlaybackController } from '@/layers/controllers/playback-controller';
-import { SessionExportController } from '@/layers/controllers/session-export-controller';
-import { TrackController } from '@/layers/controllers/track-controller';
+} from '@/controllers/id-generator';
+import { PlaybackController } from '@/controllers/playback-controller';
+import { SessionExportController } from '@/controllers/session-export-controller';
+import { TrackController } from '@/controllers/track-controller';
 import {
   createSessionStore,
   type ISessionReader,
   type ISessionStore,
-} from '@/layers/session/session-store';
-import { createEmptySession } from '@/layers/session/session-state';
+} from '@/session/session-store';
+import { createEmptySession } from '@/session/session-state';
 
 export interface ICreateAppOptions {
   audioEngine?: IAudioEngine;

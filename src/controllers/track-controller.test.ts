@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { TrackController } from './track-controller';
 import type { IdGenerator } from './id-generator';
-import { FakeAudioEngine } from '@/layers/audio-engine/fake-audio-engine';
+import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
 import {
   createSessionStore,
   type ISessionStore,
-} from '@/layers/session/session-store';
-import { createEmptySession } from '@/layers/session/session-state';
-import { createCallRecorder } from '@/layers/testing/call-recorder';
+} from '@/session/session-store';
+import { createEmptySession } from '@/session/session-state';
+import { createCallRecorder } from '@/testing/call-recorder';
 import {
   RegionNotFoundError,
   TrackNotFoundError,
-} from '@/layers/session/session-errors';
+} from '@/session/session-errors';
 
 function fixedIdGenerator(): IdGenerator {
   let trackCounter = 0;
