@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
-const LAYERS_DIR = path.resolve(__dirname, '..');
+const SOURCE_DIR = path.resolve(__dirname, '..');
 const SELF_FILE = path.resolve(__filename);
 
 interface ScannedFile {
@@ -32,7 +32,7 @@ function collectSourceFiles(rootDir: string): ScannedFile[] {
     }
     collected.push({
       absolutePath,
-      relativePath: path.relative(LAYERS_DIR, absolutePath),
+      relativePath: path.relative(SOURCE_DIR, absolutePath),
       content: readFileSync(absolutePath, 'utf8'),
     });
   }
@@ -56,20 +56,64 @@ function importsModule(content: string, moduleName: string): boolean {
   return pattern.test(content);
 }
 
-function importsFromInternalLayer(
-  content: string,
-  layerPrefix: string
-): boolean {
-  const aliasPattern = new RegExp(
-    `(?:from|import)\\s+['"]@/layers/${layerPrefix}(?:/[^'"]*)?['"]`
-  );
-  const relativePattern = new RegExp(
-    `(?:from|import)\\s+['"](?:\\.\\.?/)+layers/${layerPrefix}(?:/[^'"]*)?['"]`
-  );
-  return aliasPattern.test(content) || relativePattern.test(content);
+function getImportSpecifiers(content: string): string[] {
+  const pattern =
+    /\b(?:import|export)\s+(?:type\s+)?(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]|\bimport\(\s*['"]([^'"]+)['"]\s*\)/g;
+  const specifiers: string[] = [];
+
+  for (const match of content.matchAll(pattern)) {
+    specifiers.push(match[1] ?? match[2]);
+  }
+
+  return specifiers;
 }
 
-const ALL_SOURCE_FILES = collectSourceFiles(LAYERS_DIR);
+function toPosixPath(input: string): string {
+  return input.split(path.sep).join('/');
+}
+
+function resolveInternalImport(
+  file: ScannedFile,
+  specifier: string
+): string | null {
+  if (specifier.startsWith('@/')) {
+    return specifier.slice(2);
+  }
+
+  if (!specifier.startsWith('.')) {
+    return null;
+  }
+
+  const absoluteImportPath = path.resolve(
+    path.dirname(file.absolutePath),
+    specifier
+  );
+  const relativeImportPath = path.relative(SOURCE_DIR, absoluteImportPath);
+
+  if (relativeImportPath.startsWith('..')) {
+    return null;
+  }
+
+  return toPosixPath(relativeImportPath);
+}
+
+function resolvedInternalImports(file: ScannedFile): string[] {
+  return getImportSpecifiers(file.content)
+    .map((specifier) => resolveInternalImport(file, specifier))
+    .filter((specifier): specifier is string => specifier !== null);
+}
+
+function importsFromInternalLayer(
+  file: ScannedFile,
+  layerPrefix: string
+): boolean {
+  return resolvedInternalImports(file).some(
+    (specifier) =>
+      specifier === layerPrefix || specifier.startsWith(`${layerPrefix}/`)
+  );
+}
+
+const ALL_SOURCE_FILES = collectSourceFiles(SOURCE_DIR);
 
 describe('architecture boundary', () => {
   describe('tone import boundary', () => {
@@ -112,64 +156,64 @@ describe('architecture boundary', () => {
     );
 
     function importsAudioEnginePath(
-      content: string,
+      file: ScannedFile,
       audioSubpath: string
     ): boolean {
-      const aliasPattern = new RegExp(
-        `(?:from|import)\\s+['"]@/layers/audio-engine/${audioSubpath}(?:/[^'"]*)?['"]`
+      const target = `audio-engine/${audioSubpath}`;
+      return resolvedInternalImports(file).some(
+        (specifier) =>
+          specifier === target || specifier.startsWith(`${target}/`)
       );
-      const relativePattern = new RegExp(
-        `(?:from|import)\\s+['"](?:\\.\\.?/)+layers/audio-engine/${audioSubpath}(?:/[^'"]*)?['"]`
-      );
-      return aliasPattern.test(content) || relativePattern.test(content);
     }
 
     it('controllers do not import FakeAudioEngine', () => {
       const offenders = controllerFiles.filter((file) =>
-        importsAudioEnginePath(file.content, 'fake-audio-engine')
+        importsAudioEnginePath(file, 'fake-audio-engine')
       );
       expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
 
-    it('controllers do not import from layers/audio-engine/tone', () => {
+    it('controllers do not import from audio-engine/tone', () => {
       const offenders = controllerFiles.filter((file) =>
-        importsAudioEnginePath(file.content, 'tone')
+        importsAudioEnginePath(file, 'tone')
       );
       expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
   });
 
-  describe('apps depend only on controllers and testing', () => {
+  describe('apps depend only on apps, controllers, composition, or testing', () => {
     const appsFiles = ALL_SOURCE_FILES.filter((file) =>
       isInsideLayer(file.relativePath, 'apps')
     );
 
-    it('apps do not import from layers/session directly', () => {
+    it('apps do not import from session directly', () => {
       const offenders = appsFiles.filter((file) =>
-        importsFromInternalLayer(file.content, 'session')
+        importsFromInternalLayer(file, 'session')
       );
       expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
 
-    it('apps do not import from layers/audio-engine directly', () => {
+    it('apps do not import from audio-engine directly', () => {
       const offenders = appsFiles.filter((file) =>
-        importsFromInternalLayer(file.content, 'audio-engine')
+        importsFromInternalLayer(file, 'audio-engine')
       );
       expect(offenders.map((file) => file.relativePath)).toEqual([]);
     });
 
-    it('apps only import from layers/controllers, layers/composition, or layers/testing', () => {
-      const allowedLayers = new Set(['controllers', 'composition', 'testing']);
-      const layerImportPattern =
-        /(?:from|import)\s+['"](?:@\/layers|(?:\.\.?\/)+layers)\/([^/'"]+)/g;
+    it('apps only import from allowed top-level modules', () => {
+      const allowedLayers = new Set([
+        'apps',
+        'controllers',
+        'composition',
+        'testing',
+      ]);
       const offenders: string[] = [];
 
       for (const file of appsFiles) {
-        const matches = file.content.matchAll(layerImportPattern);
-        for (const match of matches) {
-          const layer = match[1];
+        for (const specifier of resolvedInternalImports(file)) {
+          const layer = specifier.split('/')[0];
           if (!allowedLayers.has(layer)) {
-            offenders.push(`${file.relativePath} → layers/${layer}`);
+            offenders.push(`${file.relativePath} -> ${specifier}`);
           }
         }
       }
