@@ -599,6 +599,16 @@ describe('ToneAudioEngine.exportSession', () => {
     expect(toneState.destination.volume.value).toBeCloseTo(-6.0206, 3);
   });
 
+  it('silences the offline destination when master volume is zero', async () => {
+    const provider = await makeProviderWithBuffers();
+    const snapshot = snapshotForExport();
+    snapshot.playback.masterVolume = 0;
+
+    await provider.exportSession(1, snapshot);
+
+    expect(toneState.destination.volume.value).toBe(-Infinity);
+  });
+
   it('rebuilds tracks and regions inside the offline context', async () => {
     const provider = await makeProviderWithBuffers();
 
