@@ -196,6 +196,7 @@ export class ToneAudioEngine implements IAudioEngine {
 
     const offlineBuffer = await Offline(({ transport }) => {
       transport.bpm.value = session.playback.bpm;
+      getDestination().volume.value = unitToDb(session.playback.masterVolume);
 
       for (const trackId of session.trackOrder) {
         const track = session.tracksById[trackId];
