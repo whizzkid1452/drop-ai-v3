@@ -3,20 +3,6 @@ import { createApp } from '@/composition/create-app';
 import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
 import { createCallRecorder } from '@/testing/call-recorder';
 
-interface RegisteredAssetResult {
-  id: string;
-  duration: number;
-}
-
-interface IdResult {
-  id: string;
-}
-
-interface SplitResult {
-  leftId: string;
-  rightId: string;
-}
-
 function fixedIdGenerator() {
   const counters: Record<string, number> = {};
   return {
@@ -25,45 +11,6 @@ function fixedIdGenerator() {
       return `${prefix}-${counters[prefix]}`;
     },
   };
-}
-
-function assertRegisteredAssetResult(
-  value: unknown
-): asserts value is RegisteredAssetResult {
-  if (
-    typeof value !== 'object' ||
-    value === null ||
-    !('id' in value) ||
-    typeof value.id !== 'string' ||
-    !('duration' in value) ||
-    typeof value.duration !== 'number'
-  ) {
-    throw new Error('Expected registered asset command data.');
-  }
-}
-
-function assertIdResult(value: unknown): asserts value is IdResult {
-  if (
-    typeof value !== 'object' ||
-    value === null ||
-    !('id' in value) ||
-    typeof value.id !== 'string'
-  ) {
-    throw new Error('Expected an { id } command result.');
-  }
-}
-
-function assertSplitResult(value: unknown): asserts value is SplitResult {
-  if (
-    typeof value !== 'object' ||
-    value === null ||
-    !('leftId' in value) ||
-    typeof value.leftId !== 'string' ||
-    !('rightId' in value) ||
-    typeof value.rightId !== 'string'
-  ) {
-    throw new Error('Expected split command data.');
-  }
 }
 
 describe('in-memory end-to-end session lifecycle', () => {
@@ -88,7 +35,6 @@ describe('in-memory end-to-end session lifecycle', () => {
       throw new Error(assetResult.error.message);
     }
     const asset = assetResult.data;
-    assertRegisteredAssetResult(asset);
     expect(asset).toEqual({ id: 'asset-1', duration: 4 });
 
     const trackResult = await app.controller.executeCommand({
@@ -99,7 +45,6 @@ describe('in-memory end-to-end session lifecycle', () => {
       throw new Error(trackResult.error.message);
     }
     const track = trackResult.data;
-    assertIdResult(track);
     expect(track).toEqual({ id: 'track-1' });
 
     const regionResult = await app.controller.executeCommand({
@@ -111,7 +56,6 @@ describe('in-memory end-to-end session lifecycle', () => {
       throw new Error(regionResult.error.message);
     }
     const region = regionResult.data;
-    assertIdResult(region);
     expect(region).toEqual({ id: 'region-1' });
 
     const splitResult = await app.controller.executeCommand({
@@ -123,7 +67,6 @@ describe('in-memory end-to-end session lifecycle', () => {
       throw new Error(splitResult.error.message);
     }
     const split = splitResult.data;
-    assertSplitResult(split);
     expect(split).toEqual({ leftId: 'region-1', rightId: 'region-2' });
 
     const session = app.sessionReader.getState();
