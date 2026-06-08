@@ -1,7 +1,6 @@
 import type { IAudioEngine } from '@/audio-engine/audio-engine';
 import { TrackNotFoundError } from '@/session/session-errors';
 import { sessionOps } from '@/session/session-operations';
-import type { SessionState } from '@/session/session-state';
 import type { ISessionStore } from '@/session/session-store';
 import type {
   AddRegionFromAssetInput,
@@ -10,6 +9,7 @@ import type {
   SplitRegionInput,
   TrackCommandTarget,
 } from './command-controller';
+import { commitSession } from './commit-session';
 import type { IdGenerator } from './id-generator';
 
 const DEFAULT_REGION_OFFSET = 0;
@@ -33,48 +33,64 @@ export class TrackController implements TrackCommandTarget {
 
   async addTrack(): Promise<{ id: string }> {
     const trackId = this.idGenerator.next('track');
+    const nextState = sessionOps.addTrack(this.sessionStore.getState(), {
+      trackId,
+      name: trackId,
+    });
 
     this.audioEngine.createTrack(trackId);
-    this.sessionStore.applyOperation((state) =>
-      sessionOps.addTrack(state, { trackId, name: trackId })
-    );
+    commitSession(this.sessionStore, nextState);
 
     return { id: trackId };
   }
 
   removeTrack(trackId: string): void {
+    const nextState = sessionOps.removeTrack(this.sessionStore.getState(), {
+      trackId,
+    });
+
     this.audioEngine.removeTrack(trackId);
-    this.sessionStore.applyOperation((state) =>
-      sessionOps.removeTrack(state, { trackId })
-    );
+    commitSession(this.sessionStore, nextState);
   }
 
   setTrackVolume(trackId: string, volume: number): void {
+    const nextState = sessionOps.setTrackVolume(this.sessionStore.getState(), {
+      trackId,
+      volume,
+    });
+
     this.audioEngine.setTrackVolume(trackId, volume);
-    this.sessionStore.applyOperation((state) =>
-      sessionOps.setTrackVolume(state, { trackId, volume })
-    );
+    commitSession(this.sessionStore, nextState);
   }
 
   setTrackMute(trackId: string, muted: boolean): void {
+    const nextState = sessionOps.setTrackMute(this.sessionStore.getState(), {
+      trackId,
+      muted,
+    });
+
     this.audioEngine.setTrackMute(trackId, muted);
-    this.sessionStore.applyOperation((state) =>
-      sessionOps.setTrackMute(state, { trackId, muted })
-    );
+    commitSession(this.sessionStore, nextState);
   }
 
   setTrackSolo(trackId: string, soloed: boolean): void {
+    const nextState = sessionOps.setTrackSolo(this.sessionStore.getState(), {
+      trackId,
+      soloed,
+    });
+
     this.audioEngine.setTrackSolo(trackId, soloed);
-    this.sessionStore.applyOperation((state) =>
-      sessionOps.setTrackSolo(state, { trackId, soloed })
-    );
+    commitSession(this.sessionStore, nextState);
   }
 
   setTrackPan(trackId: string, pan: number): void {
+    const nextState = sessionOps.setTrackPan(this.sessionStore.getState(), {
+      trackId,
+      pan,
+    });
+
     this.audioEngine.setTrackPan(trackId, pan);
-    this.sessionStore.applyOperation((state) =>
-      sessionOps.setTrackPan(state, { trackId, pan })
-    );
+    commitSession(this.sessionStore, nextState);
   }
 
   async addRegionFromAsset({
@@ -98,24 +114,35 @@ export class TrackController implements TrackCommandTarget {
   }
 
   moveRegion({ trackId, regionId, startTime }: MoveRegionInput): void {
+    const nextState = sessionOps.moveRegion(this.sessionStore.getState(), {
+      trackId,
+      regionId,
+      startTime,
+    });
+
     this.audioEngine.moveRegion({ trackId, regionId, startTime });
-    this.sessionStore.applyOperation((state) =>
-      sessionOps.moveRegion(state, { trackId, regionId, startTime })
-    );
+    commitSession(this.sessionStore, nextState);
   }
 
   resizeRegion({ trackId, regionId, duration }: ResizeRegionInput): void {
+    const nextState = sessionOps.resizeRegion(this.sessionStore.getState(), {
+      trackId,
+      regionId,
+      duration,
+    });
+
     this.audioEngine.resizeRegion({ trackId, regionId, duration });
-    this.sessionStore.applyOperation((state) =>
-      sessionOps.resizeRegion(state, { trackId, regionId, duration })
-    );
+    commitSession(this.sessionStore, nextState);
   }
 
   removeRegion(trackId: string, regionId: string): void {
+    const nextState = sessionOps.removeRegion(this.sessionStore.getState(), {
+      trackId,
+      regionId,
+    });
+
     this.audioEngine.removeRegion(trackId, regionId);
-    this.sessionStore.applyOperation((state) =>
-      sessionOps.removeRegion(state, { trackId, regionId })
-    );
+    commitSession(this.sessionStore, nextState);
   }
 
   splitRegion({ trackId, regionId, splitTime }: SplitRegionInput): {
@@ -158,7 +185,7 @@ export class TrackController implements TrackCommandTarget {
       throw error;
     }
 
-    this.commitSession(nextState);
+    commitSession(this.sessionStore, nextState);
 
     return { leftId: regionId, rightId: newRegionId };
   }
@@ -176,6 +203,15 @@ export class TrackController implements TrackCommandTarget {
     startTime: number;
     duration: number;
   }): void {
+    const nextState = sessionOps.addRegion(this.sessionStore.getState(), {
+      trackId: input.trackId,
+      regionId: input.regionId,
+      assetId: input.assetId,
+      startTime: input.startTime,
+      duration: input.duration,
+      offset: DEFAULT_REGION_OFFSET,
+    });
+
     this.audioEngine.addRegion({
       trackId: input.trackId,
       regionId: input.regionId,
@@ -184,22 +220,7 @@ export class TrackController implements TrackCommandTarget {
       duration: input.duration,
       offset: DEFAULT_REGION_OFFSET,
     });
-    this.sessionStore.applyOperation((state) =>
-      sessionOps.addRegion(state, {
-        trackId: input.trackId,
-        regionId: input.regionId,
-        assetId: input.assetId,
-        startTime: input.startTime,
-        duration: input.duration,
-        offset: DEFAULT_REGION_OFFSET,
-      })
-    );
-  }
-
-  // splitRegion commits a precomputed snapshot because its audio calls and
-  // rollback derive from nextState; the other mutators recompute at commit.
-  private commitSession(nextState: SessionState): void {
-    this.sessionStore.applyOperation(() => nextState);
+    commitSession(this.sessionStore, nextState);
   }
 
   private tryResizeAudioRegion(input: {
