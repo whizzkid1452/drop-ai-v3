@@ -135,9 +135,36 @@ describe('in-memory end-to-end session lifecycle', () => {
     expect(session.tracksById[track.id].regionsById[split.leftId].assetId).toBe(
       asset.id
     );
+
+    // 같은 편집이 audio engine 에도 그대로 도달했는지 — session 과 audio 의 일관성.
     expect(recorder.getCalls('importFileAsset')[0].args).toEqual([
       asset.id,
       file,
+    ]);
+    expect(recorder.getCalls('createTrack')[0].args).toEqual([track.id]);
+
+    const addRegionCalls = recorder.getCalls('addRegion');
+    expect(addRegionCalls).toHaveLength(2);
+    expect(addRegionCalls[0].args[0]).toEqual({
+      trackId: track.id,
+      regionId: region.id,
+      assetId: asset.id,
+      startTime: 0,
+      duration: 4,
+      offset: 0,
+    });
+    expect(addRegionCalls[1].args[0]).toEqual({
+      trackId: track.id,
+      regionId: split.rightId,
+      assetId: asset.id,
+      startTime: 2,
+      duration: 2,
+      offset: 2,
+    });
+    expect(recorder.getCalls('resizeRegion')[0].args).toEqual([
+      track.id,
+      split.leftId,
+      2,
     ]);
 
     const exportResult = await app.controller.executeCommand({
