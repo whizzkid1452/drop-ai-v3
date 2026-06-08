@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppController } from './app-controller';
 import type {
+  AssetCommandTarget,
   PlaybackCommandTarget,
   SessionExportCommandTarget,
   TrackCommandTarget,
@@ -8,6 +9,7 @@ import type {
 
 describe('AppController', () => {
   let playbackController: PlaybackCommandTarget;
+  let assetController: AssetCommandTarget;
   let trackController: TrackCommandTarget;
   let sessionExportController: SessionExportCommandTarget;
 
@@ -22,6 +24,13 @@ describe('AppController', () => {
       handleMasterVolume: vi.fn(),
     };
 
+    assetController = {
+      registerFileAsset: vi.fn().mockResolvedValue({
+        id: 'asset-1',
+        duration: 4,
+      }),
+    };
+
     trackController = {
       addTrack: vi.fn().mockResolvedValue({ id: 'track-1' }),
       removeTrack: vi.fn(),
@@ -30,10 +39,6 @@ describe('AppController', () => {
       setTrackSolo: vi.fn(),
       setTrackPan: vi.fn(),
       addRegionFromAsset: vi.fn().mockResolvedValue({ id: 'region-1' }),
-      addRegionFromFile: vi.fn().mockResolvedValue({
-        assetId: 'asset-1',
-        regionId: 'region-1',
-      }),
       moveRegion: vi.fn(),
       splitRegion: vi.fn().mockReturnValue({
         leftId: 'region-1',
@@ -51,6 +56,7 @@ describe('AppController', () => {
   it('exposes only the unified command entry point', () => {
     const appController = new AppController({
       playbackController,
+      assetController,
       trackController,
       sessionExportController,
     });
@@ -65,6 +71,7 @@ describe('AppController', () => {
   it('executes commands through the unified command entry point', async () => {
     const appController = new AppController({
       playbackController,
+      assetController,
       trackController,
       sessionExportController,
     });
@@ -82,6 +89,7 @@ describe('AppController', () => {
   it('blocks invalid commands before they reach app dependencies', async () => {
     const appController = new AppController({
       playbackController,
+      assetController,
       trackController,
       sessionExportController,
     });

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CommandController,
+  type AssetCommandTarget,
   type PlaybackCommandTarget,
   type SessionExportCommandTarget,
   type TrackCommandTarget,
@@ -8,6 +9,7 @@ import {
 
 describe('CommandController', () => {
   let playbackController: PlaybackCommandTarget;
+  let assetController: AssetCommandTarget;
   let trackController: TrackCommandTarget;
   let sessionExportController: SessionExportCommandTarget;
   let commandController: CommandController;
@@ -23,6 +25,13 @@ describe('CommandController', () => {
       handleMasterVolume: vi.fn(),
     };
 
+    assetController = {
+      registerFileAsset: vi.fn().mockResolvedValue({
+        id: 'asset-1',
+        duration: 4,
+      }),
+    };
+
     trackController = {
       addTrack: vi.fn().mockResolvedValue({ id: 'track-1' }),
       removeTrack: vi.fn(),
@@ -31,10 +40,6 @@ describe('CommandController', () => {
       setTrackSolo: vi.fn(),
       setTrackPan: vi.fn(),
       addRegionFromAsset: vi.fn().mockResolvedValue({ id: 'region-1' }),
-      addRegionFromFile: vi.fn().mockResolvedValue({
-        assetId: 'asset-1',
-        regionId: 'region-1',
-      }),
       moveRegion: vi.fn(),
       splitRegion: vi.fn().mockReturnValue({
         leftId: 'region-1',
@@ -50,6 +55,7 @@ describe('CommandController', () => {
 
     commandController = new CommandController({
       playbackController,
+      assetController,
       trackController,
       sessionExportController,
     });
@@ -184,6 +190,25 @@ describe('CommandController', () => {
       'track-1',
       'region-1'
     );
+  });
+
+  it('dispatches asset.register to AssetController', async () => {
+    const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
+
+    const result = await commandController.execute({
+      type: 'asset.register',
+      payload: { file },
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      command: {
+        type: 'asset.register',
+        payload: { file },
+      },
+      data: { id: 'asset-1', duration: 4 },
+    });
+    expect(assetController.registerFileAsset).toHaveBeenCalledWith(file);
   });
 
   it('dispatches session.export to SessionExportController', async () => {

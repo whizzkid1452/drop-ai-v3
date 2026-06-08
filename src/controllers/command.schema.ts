@@ -5,6 +5,10 @@ const secondsSchema = z.number().finite().nonnegative();
 const positiveNumberSchema = z.number().finite().positive();
 const unitValueSchema = z.number().finite().min(0).max(1);
 const panValueSchema = z.number().finite().min(-1).max(1);
+const fileSchema = z.custom<File>(
+  (value) => typeof File !== 'undefined' && value instanceof File,
+  { message: 'File is required.' }
+);
 
 const playbackPlayCommandSchema = z
   .object({
@@ -203,6 +207,17 @@ const regionRemoveCommandSchema = z
   })
   .strict();
 
+const assetRegisterCommandSchema = z
+  .object({
+    type: z.literal('asset.register'),
+    payload: z
+      .object({
+        file: fileSchema,
+      })
+      .strict(),
+  })
+  .strict();
+
 const sessionExportCommandSchema = z
   .object({
     type: z.literal('session.export'),
@@ -234,6 +249,7 @@ export const commandSchema = z.discriminatedUnion('type', [
   regionSplitCommandSchema,
   regionResizeCommandSchema,
   regionRemoveCommandSchema,
+  assetRegisterCommandSchema,
   sessionExportCommandSchema,
 ]);
 

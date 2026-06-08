@@ -1,6 +1,7 @@
 import type { IAudioEngine } from '@/audio-engine/audio-engine';
 import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
 import { AppController } from '@/controllers/app-controller';
+import { AssetController } from '@/controllers/asset-controller';
 import {
   createUuidGenerator,
   type IdGenerator,
@@ -55,6 +56,11 @@ export function composeApp({
     audioEngine,
   });
 
+  const assetController = new AssetController({
+    audioEngine,
+    idGenerator,
+  });
+
   const sessionExportController = new SessionExportController({
     sessionStore,
     audioEngine,
@@ -62,6 +68,7 @@ export function composeApp({
 
   const controller = new AppController({
     playbackController,
+    assetController,
     trackController,
     sessionExportController,
   });

@@ -4,7 +4,6 @@ import { sessionOps } from '@/session/session-operations';
 import type { ISessionStore } from '@/session/session-store';
 import type {
   AddRegionFromAssetInput,
-  AddRegionFromFileInput,
   MoveRegionInput,
   ResizeRegionInput,
   SplitRegionInput,
@@ -34,10 +33,10 @@ export class TrackController implements TrackCommandTarget {
   async addTrack(): Promise<{ id: string }> {
     const trackId = this.idGenerator.next('track');
 
+    this.audioEngine.createTrack(trackId);
     this.sessionStore.applyOperation((state) =>
       sessionOps.addTrack(state, { trackId, name: trackId })
     );
-    this.audioEngine.createTrack(trackId);
 
     return { id: trackId };
   }
@@ -95,27 +94,6 @@ export class TrackController implements TrackCommandTarget {
     });
 
     return { id: regionId };
-  }
-
-  async addRegionFromFile({
-    trackId,
-    file,
-    startTime,
-  }: AddRegionFromFileInput): Promise<{ assetId: string; regionId: string }> {
-    this.assertTrackExists(trackId);
-    const assetId = this.idGenerator.next('asset');
-    const regionId = this.idGenerator.next('region');
-    const { duration } = await this.audioEngine.importFileAsset(assetId, file);
-
-    this.addRegionWithKnownDuration({
-      trackId,
-      regionId,
-      assetId,
-      startTime,
-      duration,
-    });
-
-    return { assetId, regionId };
   }
 
   moveRegion({ trackId, regionId, startTime }: MoveRegionInput): void {
@@ -188,6 +166,14 @@ export class TrackController implements TrackCommandTarget {
     startTime: number;
     duration: number;
   }): void {
+    this.audioEngine.addRegion({
+      trackId: input.trackId,
+      regionId: input.regionId,
+      assetId: input.assetId,
+      startTime: input.startTime,
+      duration: input.duration,
+      offset: DEFAULT_REGION_OFFSET,
+    });
     this.sessionStore.applyOperation((state) =>
       sessionOps.addRegion(state, {
         trackId: input.trackId,
@@ -198,13 +184,5 @@ export class TrackController implements TrackCommandTarget {
         offset: DEFAULT_REGION_OFFSET,
       })
     );
-    this.audioEngine.addRegion({
-      trackId: input.trackId,
-      regionId: input.regionId,
-      assetId: input.assetId,
-      startTime: input.startTime,
-      duration: input.duration,
-      offset: DEFAULT_REGION_OFFSET,
-    });
   }
 }

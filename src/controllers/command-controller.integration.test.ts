@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AppController } from './app-controller';
+import { AssetController } from './asset-controller';
 import { PlaybackController } from './playback-controller';
 import { SessionExportController } from './session-export-controller';
 import { TrackController } from './track-controller';
@@ -60,6 +61,10 @@ function setup(): Harness {
     sessionStore: store,
     audioEngine: audio,
   });
+  const asset = new AssetController({
+    audioEngine: audio,
+    idGenerator,
+  });
   const sessionExport = new SessionExportController({
     sessionStore: store,
     audioEngine: audio,
@@ -67,6 +72,7 @@ function setup(): Harness {
 
   const app = new AppController({
     playbackController: playback,
+    assetController: asset,
     trackController: track,
     sessionExportController: sessionExport,
   });
@@ -123,6 +129,20 @@ describe('command-controller integration: result shapes', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data).toBeUndefined();
+    }
+  });
+
+  it('asset.register returns data { id, duration }', async () => {
+    const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
+
+    const result = await h.app.executeCommand({
+      type: 'asset.register',
+      payload: { file },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data).toEqual({ id: 'asset-1', duration: 4 });
     }
   });
 });

@@ -3,7 +3,13 @@ export {
   type AppControllerDependencies,
 } from './app-controller';
 export {
+  AssetController,
+  type AssetControllerDependencies,
+} from './asset-controller';
+export {
   CommandController,
+  type AssetCommandTarget,
+  type CommandControllerDependencies,
   type PlaybackCommandTarget,
   type SessionExportCommandTarget,
   type TrackCommandTarget,

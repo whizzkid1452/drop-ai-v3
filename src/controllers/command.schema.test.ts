@@ -104,6 +104,23 @@ describe('commandSchema', () => {
     ).toBe(true);
   });
 
+  it('validates asset commands', () => {
+    const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
+
+    expect(
+      commandSchema.safeParse({
+        type: 'asset.register',
+        payload: { file },
+      }).success
+    ).toBe(true);
+    expect(
+      commandSchema.safeParse({
+        type: 'asset.register',
+        payload: { file: 'loop.wav' },
+      }).success
+    ).toBe(false);
+  });
+
   it('validates session commands', () => {
     expect(
       commandSchema.safeParse({

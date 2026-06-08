@@ -48,6 +48,33 @@ describe('createApp', () => {
     ]);
   });
 
+  it('routes asset.register through the wired controllers', async () => {
+    const recorder = createCallRecorder();
+    const app = createApp({
+      audioEngine: new FakeAudioEngine({
+        recorder,
+        assetDurations: { 'asset-1': 3.25 },
+      }),
+      idGenerator: createIdGenerator(),
+      sessionId: 'session-1',
+    });
+    const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
+
+    const result = await app.controller.executeCommand({
+      type: 'asset.register',
+      payload: { file },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data).toEqual({ id: 'asset-1', duration: 3.25 });
+    }
+    expect(recorder.getCalls('importFileAsset')[0].args).toEqual([
+      'asset-1',
+      file,
+    ]);
+  });
+
   it('uses FakeAudioEngine by default when none is provided', async () => {
     const app = createApp({
       idGenerator: createIdGenerator(),

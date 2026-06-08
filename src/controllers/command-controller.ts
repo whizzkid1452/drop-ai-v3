@@ -17,15 +17,13 @@ export interface PlaybackLoopInput {
   enabled: boolean;
 }
 
+export interface AssetCommandTarget {
+  registerFileAsset(file: File): Promise<unknown>;
+}
+
 export interface AddRegionFromAssetInput {
   trackId: string;
   assetId: string;
-  startTime: number;
-}
-
-export interface AddRegionFromFileInput {
-  trackId: string;
-  file: File;
   startTime: number;
 }
 
@@ -55,7 +53,6 @@ export interface TrackCommandTarget {
   setTrackSolo(trackId: string, soloed: boolean): void;
   setTrackPan(trackId: string, pan: number): void;
   addRegionFromAsset(input: AddRegionFromAssetInput): Promise<unknown>;
-  addRegionFromFile(input: AddRegionFromFileInput): Promise<unknown>;
   moveRegion(input: MoveRegionInput): void;
   splitRegion(input: SplitRegionInput): unknown;
   resizeRegion(input: ResizeRegionInput): void;
@@ -68,21 +65,25 @@ export interface SessionExportCommandTarget {
 
 export interface CommandControllerDependencies {
   playbackController: PlaybackCommandTarget;
+  assetController: AssetCommandTarget;
   trackController: TrackCommandTarget;
   sessionExportController: SessionExportCommandTarget;
 }
 
 export class CommandController {
   private readonly playbackController: PlaybackCommandTarget;
+  private readonly assetController: AssetCommandTarget;
   private readonly trackController: TrackCommandTarget;
   private readonly sessionExportController: SessionExportCommandTarget;
 
   constructor({
     playbackController,
+    assetController,
     trackController,
     sessionExportController,
   }: CommandControllerDependencies) {
     this.playbackController = playbackController;
+    this.assetController = assetController;
     this.trackController = trackController;
     this.sessionExportController = sessionExportController;
   }
@@ -202,10 +203,22 @@ export class CommandController {
         );
         return undefined;
 
+      case 'asset.register':
+        return await this.assetController.registerFileAsset(
+          command.payload.file
+        );
+
       case 'session.export':
         return await this.sessionExportController.exportSession(
           command.payload?.filename
         );
+
+      default:
+        return assertNever(command);
     }
   }
+}
+
+function assertNever(command: never): never {
+  throw new Error(`Unhandled command: ${JSON.stringify(command)}`);
 }

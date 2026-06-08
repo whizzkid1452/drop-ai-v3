@@ -87,6 +87,26 @@ describe('TrackController.addTrack', () => {
       ['track-1'],
     ]);
   });
+
+  it('does not update the session when audio track creation fails', async () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      createTrack(): void {
+        throw new Error('createTrack failed');
+      }
+    })();
+    const controller = new TrackController({
+      sessionStore: store,
+      audioEngine: audio,
+      idGenerator: fixedIdGenerator(),
+    });
+
+    await expect(controller.addTrack()).rejects.toThrow('createTrack failed');
+    expect(store.getState().trackOrder).toEqual([]);
+    expect(store.getState().tracksById).toEqual({});
+  });
 });
 
 describe('TrackController.removeTrack', () => {
@@ -160,7 +180,7 @@ describe('TrackController mixer setters', () => {
 });
 
 describe('TrackController.addRegionFromAsset', () => {
-  it('queries asset duration, updates session, then calls audio.addRegion in that order', async () => {
+  it('queries asset duration, adds the audio region, and updates session', async () => {
     const harness = setup();
     await harness.controller.addTrack();
     harness.recorder.reset();
@@ -189,6 +209,34 @@ describe('TrackController.addRegionFromAsset', () => {
     expect(addRegionIndex).toBeGreaterThan(durationIndex);
   });
 
+  it('does not update the session when audio region creation fails', async () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      addRegion(): void {
+        throw new Error('addRegion failed');
+      }
+    })({ assetDurations: { 'asset-1': 4 } });
+    const controller = new TrackController({
+      sessionStore: store,
+      audioEngine: audio,
+      idGenerator: fixedIdGenerator(),
+    });
+    await controller.addTrack();
+
+    await expect(
+      controller.addRegionFromAsset({
+        trackId: 'track-1',
+        assetId: 'asset-1',
+        startTime: 0,
+      })
+    ).rejects.toThrow('addRegion failed');
+
+    expect(store.getState().tracksById['track-1'].regionOrder).toEqual([]);
+    expect(store.getState().tracksById['track-1'].regionsById).toEqual({});
+  });
+
   it('throws TrackNotFoundError when the track does not exist', async () => {
     const { controller } = setup();
 
@@ -199,56 +247,6 @@ describe('TrackController.addRegionFromAsset', () => {
         startTime: 0,
       })
     ).rejects.toThrow(TrackNotFoundError);
-  });
-});
-
-describe('TrackController.addRegionFromFile', () => {
-  it('imports the file as an asset, updates session, then calls audio.addRegion', async () => {
-    const harness = setup();
-    await harness.controller.addTrack();
-    harness.recorder.reset();
-    const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
-
-    const result = await harness.controller.addRegionFromFile({
-      trackId: 'track-1',
-      file,
-      startTime: 1.5,
-    });
-
-    expect(result).toEqual({ assetId: 'asset-1', regionId: 'region-1' });
-    const region =
-      harness.store.getState().tracksById['track-1'].regionsById['region-1'];
-    expect(region).toEqual({
-      id: 'region-1',
-      assetId: 'asset-1',
-      startTime: 1.5,
-      duration: 4,
-      offset: 0,
-    });
-
-    const methodOrder = harness.recorder.calls.map((call) => call.method);
-    expect(methodOrder.indexOf('importFileAsset')).toBeGreaterThanOrEqual(0);
-    expect(methodOrder.indexOf('addRegion')).toBeGreaterThan(
-      methodOrder.indexOf('importFileAsset')
-    );
-    expect(harness.recorder.getCalls('importFileAsset')[0].args).toEqual([
-      'asset-1',
-      file,
-    ]);
-  });
-
-  it('throws TrackNotFoundError without importing the file when the track does not exist', async () => {
-    const harness = setup();
-    const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
-
-    await expect(
-      harness.controller.addRegionFromFile({
-        trackId: 'missing',
-        file,
-        startTime: 0,
-      })
-    ).rejects.toThrow(TrackNotFoundError);
-    expect(harness.recorder.getCalls('importFileAsset')).toHaveLength(0);
   });
 });
 
