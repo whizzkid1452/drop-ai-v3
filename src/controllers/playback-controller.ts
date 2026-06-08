@@ -21,53 +21,53 @@ export class PlaybackController implements PlaybackCommandTarget {
   }
 
   async handlePlay(): Promise<void> {
+    await this.audioEngine.play();
     this.sessionStore.applyOperation((state) =>
       sessionOps.setPlaying(state, { playing: true })
     );
-    await this.audioEngine.play();
   }
 
   handlePause(): void {
+    this.audioEngine.pause();
     this.sessionStore.applyOperation((state) =>
       sessionOps.setPlaying(state, { playing: false })
     );
-    this.audioEngine.pause();
   }
 
   handleStop(): void {
+    this.audioEngine.stop();
     this.sessionStore.applyOperation((state) =>
       sessionOps.setPosition(sessionOps.setPlaying(state, { playing: false }), {
         positionSeconds: 0,
       })
     );
-    this.audioEngine.stop();
   }
 
   handleSeek(seconds: number): void {
+    this.audioEngine.seek(seconds);
     this.sessionStore.applyOperation((state) =>
       sessionOps.setPosition(state, { positionSeconds: seconds })
     );
-    this.audioEngine.seek(seconds);
   }
 
   handleLoop({ start, end, enabled }: PlaybackLoopInput): void {
+    this.audioEngine.setLoop({ start, end, enabled });
     this.sessionStore.applyOperation((state) =>
       sessionOps.setLoop(state, { start, end, enabled })
     );
-    this.audioEngine.setLoop({ start, end, enabled });
   }
 
   handleBpm(bpm: number): void {
+    this.audioEngine.setBpm(bpm);
     this.sessionStore.applyOperation((state) =>
       sessionOps.setBpm(state, { bpm })
     );
-    this.audioEngine.setBpm(bpm);
   }
 
   handleMasterVolume(volume: number): void {
+    this.audioEngine.setMasterVolume(volume);
     this.sessionStore.applyOperation((state) =>
       sessionOps.setMasterVolume(state, { volume })
     );
-    this.audioEngine.setMasterVolume(volume);
   }
 }

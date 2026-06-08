@@ -41,6 +41,24 @@ describe('PlaybackController', () => {
     expect(h.recorder.getCalls('play')).toHaveLength(1);
   });
 
+  it('handlePlay leaves playback.playing false when audio.play fails', async () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      async play(): Promise<void> {
+        throw new Error('play failed');
+      }
+    })();
+    const controller = new PlaybackController({
+      sessionStore: store,
+      audioEngine: audio,
+    });
+
+    await expect(controller.handlePlay()).rejects.toThrow('play failed');
+    expect(store.getState().playback.playing).toBe(false);
+  });
+
   it('handlePause clears playing and calls audio.pause', async () => {
     await h.controller.handlePlay();
     h.recorder.reset();
@@ -49,6 +67,25 @@ describe('PlaybackController', () => {
 
     expect(h.store.getState().playback.playing).toBe(false);
     expect(h.recorder.getCalls('pause')).toHaveLength(1);
+  });
+
+  it('handlePause leaves playing true when audio.pause fails', async () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      pause(): void {
+        throw new Error('pause failed');
+      }
+    })();
+    const controller = new PlaybackController({
+      sessionStore: store,
+      audioEngine: audio,
+    });
+    await controller.handlePlay();
+
+    expect(() => controller.handlePause()).toThrow('pause failed');
+    expect(store.getState().playback.playing).toBe(true);
   });
 
   it('handleStop sets playing false, position 0, and calls audio.stop', async () => {
@@ -64,11 +101,52 @@ describe('PlaybackController', () => {
     expect(h.recorder.getCalls('stop')).toHaveLength(1);
   });
 
+  it('handleStop leaves the session unchanged when audio.stop fails', async () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      stop(): void {
+        throw new Error('stop failed');
+      }
+    })();
+    const controller = new PlaybackController({
+      sessionStore: store,
+      audioEngine: audio,
+    });
+    await controller.handlePlay();
+    controller.handleSeek(5);
+
+    expect(() => controller.handleStop()).toThrow('stop failed');
+    const playback = store.getState().playback;
+    expect(playback.playing).toBe(true);
+    expect(playback.positionSeconds).toBe(5);
+  });
+
   it('handleSeek updates session position and audio position', () => {
     h.controller.handleSeek(3.5);
 
     expect(h.store.getState().playback.positionSeconds).toBe(3.5);
     expect(h.recorder.getCalls('seek')[0].args).toEqual([3.5]);
+  });
+
+  it('handleSeek leaves the position unchanged when audio.seek fails', () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      seek(): void {
+        throw new Error('seek failed');
+      }
+    })();
+    const controller = new PlaybackController({
+      sessionStore: store,
+      audioEngine: audio,
+    });
+    const positionBefore = store.getState().playback.positionSeconds;
+
+    expect(() => controller.handleSeek(3.5)).toThrow('seek failed');
+    expect(store.getState().playback.positionSeconds).toBe(positionBefore);
   });
 
   it('handleLoop updates session and audio', () => {
