@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createApp } from '@/composition/create-app';
 import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
+import { createCallRecorder } from '@/testing/call-recorder';
 
 function fixedIdGenerator() {
   const counters: Record<string, number> = {};
@@ -13,14 +14,28 @@ function fixedIdGenerator() {
 }
 
 describe('in-memory end-to-end session lifecycle', () => {
-  it('edits an in-memory session and exports it as WAV data', async () => {
+  it('registers an asset, edits an in-memory session, and completes a WAV export', async () => {
+    const recorder = createCallRecorder();
     const app = createApp({
       audioEngine: new FakeAudioEngine({
+        recorder,
         assetDurations: { 'asset-1': 4 },
       }),
       idGenerator: fixedIdGenerator(),
       sessionId: 'session-1',
     });
+    const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
+
+    const assetResult = await app.controller.executeCommand({
+      type: 'asset.register',
+      payload: { file },
+    });
+    expect(assetResult.ok).toBe(true);
+    if (!assetResult.ok) {
+      throw new Error(assetResult.error.message);
+    }
+    expect(assetResult.data).toEqual({ id: 'asset-1', duration: 4 });
+    const asset = assetResult.data as { id: string; duration: number };
 
     const trackResult = await app.controller.executeCommand({
       type: 'track.add',
@@ -29,7 +44,7 @@ describe('in-memory end-to-end session lifecycle', () => {
 
     const regionResult = await app.controller.executeCommand({
       type: 'region.add',
-      payload: { trackId: 'track-1', assetId: 'asset-1', startTime: 0 },
+      payload: { trackId: 'track-1', assetId: asset.id, startTime: 0 },
     });
     expect(regionResult.ok).toBe(true);
 
@@ -44,6 +59,13 @@ describe('in-memory end-to-end session lifecycle', () => {
     expect(session.tracksById['track-1'].regionOrder).toEqual([
       'region-1',
       'region-2',
+    ]);
+    expect(
+      session.tracksById['track-1'].regionsById['region-1'].assetId
+    ).toBe(asset.id);
+    expect(recorder.getCalls('importFileAsset')[0].args).toEqual([
+      asset.id,
+      file,
     ]);
 
     const exportResult = await app.controller.executeCommand({
