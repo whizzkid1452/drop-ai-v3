@@ -42,38 +42,38 @@ export class TrackController implements TrackCommandTarget {
   }
 
   removeTrack(trackId: string): void {
+    this.audioEngine.removeTrack(trackId);
     this.sessionStore.applyOperation((state) =>
       sessionOps.removeTrack(state, { trackId })
     );
-    this.audioEngine.removeTrack(trackId);
   }
 
   setTrackVolume(trackId: string, volume: number): void {
+    this.audioEngine.setTrackVolume(trackId, volume);
     this.sessionStore.applyOperation((state) =>
       sessionOps.setTrackVolume(state, { trackId, volume })
     );
-    this.audioEngine.setTrackVolume(trackId, volume);
   }
 
   setTrackMute(trackId: string, muted: boolean): void {
+    this.audioEngine.setTrackMute(trackId, muted);
     this.sessionStore.applyOperation((state) =>
       sessionOps.setTrackMute(state, { trackId, muted })
     );
-    this.audioEngine.setTrackMute(trackId, muted);
   }
 
   setTrackSolo(trackId: string, soloed: boolean): void {
+    this.audioEngine.setTrackSolo(trackId, soloed);
     this.sessionStore.applyOperation((state) =>
       sessionOps.setTrackSolo(state, { trackId, soloed })
     );
-    this.audioEngine.setTrackSolo(trackId, soloed);
   }
 
   setTrackPan(trackId: string, pan: number): void {
+    this.audioEngine.setTrackPan(trackId, pan);
     this.sessionStore.applyOperation((state) =>
       sessionOps.setTrackPan(state, { trackId, pan })
     );
-    this.audioEngine.setTrackPan(trackId, pan);
   }
 
   async addRegionFromAsset({
@@ -97,24 +97,24 @@ export class TrackController implements TrackCommandTarget {
   }
 
   moveRegion({ trackId, regionId, startTime }: MoveRegionInput): void {
+    this.audioEngine.moveRegion({ trackId, regionId, startTime });
     this.sessionStore.applyOperation((state) =>
       sessionOps.moveRegion(state, { trackId, regionId, startTime })
     );
-    this.audioEngine.moveRegion({ trackId, regionId, startTime });
   }
 
   resizeRegion({ trackId, regionId, duration }: ResizeRegionInput): void {
+    this.audioEngine.resizeRegion({ trackId, regionId, duration });
     this.sessionStore.applyOperation((state) =>
       sessionOps.resizeRegion(state, { trackId, regionId, duration })
     );
-    this.audioEngine.resizeRegion({ trackId, regionId, duration });
   }
 
   removeRegion(trackId: string, regionId: string): void {
+    this.audioEngine.removeRegion(trackId, regionId);
     this.sessionStore.applyOperation((state) =>
       sessionOps.removeRegion(state, { trackId, regionId })
     );
-    this.audioEngine.removeRegion(trackId, regionId);
   }
 
   splitRegion({ trackId, regionId, splitTime }: SplitRegionInput): {

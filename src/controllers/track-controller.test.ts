@@ -127,6 +127,29 @@ describe('TrackController.removeTrack', () => {
 
     expect(() => controller.removeTrack('missing')).toThrow(TrackNotFoundError);
   });
+
+  it('does not remove from the session when audio removal fails', async () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      removeTrack(): void {
+        throw new Error('removeTrack failed');
+      }
+    })();
+    const controller = new TrackController({
+      sessionStore: store,
+      audioEngine: audio,
+      idGenerator: fixedIdGenerator(),
+    });
+    await controller.addTrack();
+
+    expect(() => controller.removeTrack('track-1')).toThrow(
+      'removeTrack failed'
+    );
+    expect(store.getState().trackOrder).toEqual(['track-1']);
+    expect(store.getState().tracksById['track-1']).toBeDefined();
+  });
 });
 
 describe('TrackController mixer setters', () => {
@@ -176,6 +199,29 @@ describe('TrackController mixer setters', () => {
       'track-1',
       -0.3,
     ]);
+  });
+
+  it('does not update the session when an audio mixer change fails', async () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      setTrackVolume(): void {
+        throw new Error('setTrackVolume failed');
+      }
+    })();
+    const controller = new TrackController({
+      sessionStore: store,
+      audioEngine: audio,
+      idGenerator: fixedIdGenerator(),
+    });
+    await controller.addTrack();
+    const volumeBefore = store.getState().tracksById['track-1'].volume;
+
+    expect(() => controller.setTrackVolume('track-1', 0.5)).toThrow(
+      'setTrackVolume failed'
+    );
+    expect(store.getState().tracksById['track-1'].volume).toBe(volumeBefore);
   });
 });
 
@@ -282,6 +328,39 @@ describe('TrackController.moveRegion / resizeRegion / removeRegion', () => {
     ]);
   });
 
+  it('moveRegion leaves session unchanged when audio move fails', async () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      moveRegion(): void {
+        throw new Error('moveRegion failed');
+      }
+    })({ assetDurations: { 'asset-1': 4 } });
+    const controller = new TrackController({
+      sessionStore: store,
+      audioEngine: audio,
+      idGenerator: fixedIdGenerator(),
+    });
+    await controller.addTrack();
+    await controller.addRegionFromAsset({
+      trackId: 'track-1',
+      assetId: 'asset-1',
+      startTime: 0,
+    });
+
+    expect(() =>
+      controller.moveRegion({
+        trackId: 'track-1',
+        regionId: 'region-1',
+        startTime: 5,
+      })
+    ).toThrow('moveRegion failed');
+    expect(
+      store.getState().tracksById['track-1'].regionsById['region-1'].startTime
+    ).toBe(0);
+  });
+
   it('resizeRegion updates session and audio', () => {
     harness.controller.resizeRegion({
       trackId: 'track-1',
@@ -300,6 +379,39 @@ describe('TrackController.moveRegion / resizeRegion / removeRegion', () => {
     ]);
   });
 
+  it('resizeRegion leaves session unchanged when audio resize fails', async () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      resizeRegion(): void {
+        throw new Error('resizeRegion failed');
+      }
+    })({ assetDurations: { 'asset-1': 4 } });
+    const controller = new TrackController({
+      sessionStore: store,
+      audioEngine: audio,
+      idGenerator: fixedIdGenerator(),
+    });
+    await controller.addTrack();
+    await controller.addRegionFromAsset({
+      trackId: 'track-1',
+      assetId: 'asset-1',
+      startTime: 0,
+    });
+
+    expect(() =>
+      controller.resizeRegion({
+        trackId: 'track-1',
+        regionId: 'region-1',
+        duration: 2,
+      })
+    ).toThrow('resizeRegion failed');
+    expect(
+      store.getState().tracksById['track-1'].regionsById['region-1'].duration
+    ).toBe(4);
+  });
+
   it('removeRegion updates session and audio', () => {
     harness.controller.removeRegion('track-1', 'region-1');
 
@@ -310,6 +422,38 @@ describe('TrackController.moveRegion / resizeRegion / removeRegion', () => {
       'track-1',
       'region-1',
     ]);
+  });
+
+  it('removeRegion leaves session unchanged when audio remove fails', async () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      removeRegion(): void {
+        throw new Error('removeRegion failed');
+      }
+    })({ assetDurations: { 'asset-1': 4 } });
+    const controller = new TrackController({
+      sessionStore: store,
+      audioEngine: audio,
+      idGenerator: fixedIdGenerator(),
+    });
+    await controller.addTrack();
+    await controller.addRegionFromAsset({
+      trackId: 'track-1',
+      assetId: 'asset-1',
+      startTime: 0,
+    });
+
+    expect(() => controller.removeRegion('track-1', 'region-1')).toThrow(
+      'removeRegion failed'
+    );
+    expect(store.getState().tracksById['track-1'].regionOrder).toEqual([
+      'region-1',
+    ]);
+    expect(
+      store.getState().tracksById['track-1'].regionsById['region-1']
+    ).toBeDefined();
   });
 
   it('removeRegion throws RegionNotFoundError when missing', () => {
