@@ -211,4 +211,36 @@ describe('architecture boundary', () => {
       expect(offenders).toEqual([]);
     });
   });
+
+  describe('writable session store is controllers/composition only', () => {
+    const WRITABLE_SESSION_SYMBOLS = ['ISessionStore', 'createSessionStore'];
+    const ALLOWED_LAYERS = new Set(['controllers', 'composition']);
+
+    function importsWritableSessionStore(file: ScannedFile): boolean {
+      const importStatements = file.content.matchAll(
+        /\bimport\b[^;]*?\bfrom\s*['"]([^'"]+)['"]/g
+      );
+      for (const statement of importStatements) {
+        const resolved = resolveInternalImport(file, statement[1]);
+        if (resolved !== 'session/session-store') continue;
+        if (
+          WRITABLE_SESSION_SYMBOLS.some((symbol) =>
+            new RegExp(`\\b${symbol}\\b`).test(statement[0])
+          )
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    it('only controllers and composition access the writable session store', () => {
+      const offenders = ALL_SOURCE_FILES.filter(
+        (file) =>
+          importsWritableSessionStore(file) &&
+          !ALLOWED_LAYERS.has(file.relativePath.split(path.sep)[0])
+      );
+      expect(offenders.map((file) => file.relativePath)).toEqual([]);
+    });
+  });
 });
