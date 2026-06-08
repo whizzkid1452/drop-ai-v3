@@ -1,5 +1,11 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useAppController, useSessionState } from './AppProvider';
+
+const CliTerminal = lazy(() =>
+  import('./cli/CliTerminal').then((module) => ({
+    default: module.CliTerminal,
+  }))
+);
 
 export default function App() {
   const controller = useAppController();
@@ -39,6 +45,13 @@ export default function App() {
           </li>
         ))}
       </ul>
+      <section aria-label="CLI terminal">
+        <Suspense
+          fallback={<p data-testid="cli-terminal-loading">Loading CLI</p>}
+        >
+          <CliTerminal />
+        </Suspense>
+      </section>
     </main>
   );
 }
