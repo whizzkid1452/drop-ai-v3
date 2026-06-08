@@ -48,11 +48,11 @@ describe('CommandController', () => {
       exportSession: vi.fn().mockResolvedValue(undefined),
     };
 
-    commandController = new CommandController(
+    commandController = new CommandController({
       playbackController,
       trackController,
-      sessionExportController
-    );
+      sessionExportController,
+    });
   });
 
   it('rejects invalid commands before controller dispatch', async () => {

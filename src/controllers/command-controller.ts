@@ -66,12 +66,26 @@ export interface SessionExportCommandTarget {
   exportSession(filename?: string): Promise<unknown>;
 }
 
+export interface CommandControllerDependencies {
+  playbackController: PlaybackCommandTarget;
+  trackController: TrackCommandTarget;
+  sessionExportController: SessionExportCommandTarget;
+}
+
 export class CommandController {
-  constructor(
-    private readonly playbackController: PlaybackCommandTarget,
-    private readonly trackController: TrackCommandTarget,
-    private readonly sessionExportController: SessionExportCommandTarget
-  ) {}
+  private readonly playbackController: PlaybackCommandTarget;
+  private readonly trackController: TrackCommandTarget;
+  private readonly sessionExportController: SessionExportCommandTarget;
+
+  constructor({
+    playbackController,
+    trackController,
+    sessionExportController,
+  }: CommandControllerDependencies) {
+    this.playbackController = playbackController;
+    this.trackController = trackController;
+    this.sessionExportController = sessionExportController;
+  }
 
   public async execute(rawCommand: unknown): Promise<CommandResult> {
     const parseResult = commandSchema.safeParse(rawCommand);

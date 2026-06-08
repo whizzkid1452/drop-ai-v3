@@ -1,30 +1,16 @@
 import {
   CommandController,
-  type PlaybackCommandTarget,
-  type SessionExportCommandTarget,
-  type TrackCommandTarget,
+  type CommandControllerDependencies,
 } from './command-controller';
 import type { CommandResult } from './command-result';
 
-export interface AppControllerDependencies {
-  playbackController: PlaybackCommandTarget;
-  trackController: TrackCommandTarget;
-  sessionExportController: SessionExportCommandTarget;
-}
+export type AppControllerDependencies = CommandControllerDependencies;
 
 export class AppController {
   readonly #command: CommandController;
 
-  constructor({
-    playbackController,
-    trackController,
-    sessionExportController,
-  }: AppControllerDependencies) {
-    this.#command = new CommandController(
-      playbackController,
-      trackController,
-      sessionExportController
-    );
+  constructor(dependencies: AppControllerDependencies) {
+    this.#command = new CommandController(dependencies);
   }
 
   public executeCommand(rawCommand: unknown): Promise<CommandResult> {
