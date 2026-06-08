@@ -1,6 +1,7 @@
 import type { IAudioEngine } from '@/audio-engine/audio-engine';
 import { TrackNotFoundError } from '@/session/session-errors';
 import { sessionOps } from '@/session/session-operations';
+import type { SessionState } from '@/session/session-state';
 import type { ISessionStore } from '@/session/session-store';
 import type {
   AddRegionFromAssetInput,
@@ -122,17 +123,15 @@ export class TrackController implements TrackCommandTarget {
     rightId: string;
   } {
     const newRegionId = this.idGenerator.next('region');
-
-    this.sessionStore.applyOperation((state) =>
-      sessionOps.splitRegion(state, {
-        trackId,
-        regionId,
-        splitTime,
-        newRegionId,
-      })
-    );
-
-    const nextState = this.sessionStore.getState();
+    const currentState = this.sessionStore.getState();
+    const nextState = sessionOps.splitRegion(currentState, {
+      trackId,
+      regionId,
+      splitTime,
+      newRegionId,
+    });
+    const originalRegion =
+      currentState.tracksById[trackId].regionsById[regionId];
     const leftRegion = nextState.tracksById[trackId].regionsById[regionId];
     const rightRegion = nextState.tracksById[trackId].regionsById[newRegionId];
 
@@ -141,14 +140,25 @@ export class TrackController implements TrackCommandTarget {
       regionId,
       duration: leftRegion.duration,
     });
-    this.audioEngine.addRegion({
-      trackId,
-      regionId: newRegionId,
-      assetId: rightRegion.assetId,
-      startTime: rightRegion.startTime,
-      duration: rightRegion.duration,
-      offset: rightRegion.offset,
-    });
+    try {
+      this.audioEngine.addRegion({
+        trackId,
+        regionId: newRegionId,
+        assetId: rightRegion.assetId,
+        startTime: rightRegion.startTime,
+        duration: rightRegion.duration,
+        offset: rightRegion.offset,
+      });
+    } catch (error) {
+      this.tryResizeAudioRegion({
+        trackId,
+        regionId,
+        duration: originalRegion.duration,
+      });
+      throw error;
+    }
+
+    this.commitSession(nextState);
 
     return { leftId: regionId, rightId: newRegionId };
   }
@@ -184,5 +194,23 @@ export class TrackController implements TrackCommandTarget {
         offset: DEFAULT_REGION_OFFSET,
       })
     );
+  }
+
+  // splitRegion commits a precomputed snapshot because its audio calls and
+  // rollback derive from nextState; the other mutators recompute at commit.
+  private commitSession(nextState: SessionState): void {
+    this.sessionStore.applyOperation(() => nextState);
+  }
+
+  private tryResizeAudioRegion(input: {
+    trackId: string;
+    regionId: string;
+    duration: number;
+  }): void {
+    try {
+      this.audioEngine.resizeRegion(input);
+    } catch {
+      return;
+    }
   }
 }

@@ -499,6 +499,82 @@ describe('TrackController.splitRegion', () => {
     });
   });
 
+  it('leaves session unchanged when audio resize fails during split', async () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      resizeRegion(): void {
+        throw new Error('resizeRegion failed');
+      }
+    })({ assetDurations: { 'asset-1': 4 } });
+    const controller = new TrackController({
+      sessionStore: store,
+      audioEngine: audio,
+      idGenerator: fixedIdGenerator(),
+    });
+    await controller.addTrack();
+    await controller.addRegionFromAsset({
+      trackId: 'track-1',
+      assetId: 'asset-1',
+      startTime: 2,
+    });
+
+    expect(() =>
+      controller.splitRegion({
+        trackId: 'track-1',
+        regionId: 'region-1',
+        splitTime: 4,
+      })
+    ).toThrow('resizeRegion failed');
+
+    const track = store.getState().tracksById['track-1'];
+    expect(track.regionOrder).toEqual(['region-1']);
+    expect(track.regionsById['region-1'].duration).toBe(4);
+    expect(track.regionsById['region-2']).toBeUndefined();
+  });
+
+  it('leaves session unchanged when audio add fails during split', async () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      private addRegionCalls = 0;
+
+      addRegion(...args: Parameters<FakeAudioEngine['addRegion']>): void {
+        this.addRegionCalls += 1;
+        if (this.addRegionCalls > 1) {
+          throw new Error('addRegion failed');
+        }
+        super.addRegion(...args);
+      }
+    })({ assetDurations: { 'asset-1': 4 } });
+    const controller = new TrackController({
+      sessionStore: store,
+      audioEngine: audio,
+      idGenerator: fixedIdGenerator(),
+    });
+    await controller.addTrack();
+    await controller.addRegionFromAsset({
+      trackId: 'track-1',
+      assetId: 'asset-1',
+      startTime: 2,
+    });
+
+    expect(() =>
+      controller.splitRegion({
+        trackId: 'track-1',
+        regionId: 'region-1',
+        splitTime: 4,
+      })
+    ).toThrow('addRegion failed');
+
+    const track = store.getState().tracksById['track-1'];
+    expect(track.regionOrder).toEqual(['region-1']);
+    expect(track.regionsById['region-1'].duration).toBe(4);
+    expect(track.regionsById['region-2']).toBeUndefined();
+  });
+
   it('throws RegionNotFoundError when the source region does not exist', async () => {
     const harness = setup();
     await harness.controller.addTrack();
