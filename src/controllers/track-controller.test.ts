@@ -123,9 +123,10 @@ describe('TrackController.removeTrack', () => {
   });
 
   it('throws TrackNotFoundError when the track does not exist', () => {
-    const { controller } = setup();
+    const { controller, recorder } = setup();
 
     expect(() => controller.removeTrack('missing')).toThrow(TrackNotFoundError);
+    expect(recorder.getCalls('removeTrack')).toHaveLength(0);
   });
 
   it('does not remove from the session when audio removal fails', async () => {
@@ -201,6 +202,23 @@ describe('TrackController mixer setters', () => {
     ]);
   });
 
+  it('does not call audio when the mixer target track is missing', () => {
+    expect(() =>
+      harness.controller.setTrackVolume('missing', 0.5)
+    ).toThrow(TrackNotFoundError);
+    expect(() =>
+      harness.controller.setTrackMute('missing', true)
+    ).toThrow(TrackNotFoundError);
+    expect(() =>
+      harness.controller.setTrackSolo('missing', true)
+    ).toThrow(TrackNotFoundError);
+    expect(() => harness.controller.setTrackPan('missing', 0.5)).toThrow(
+      TrackNotFoundError
+    );
+
+    expect(harness.recorder.calls).toEqual([]);
+  });
+
   it('does not update the session when an audio mixer change fails', async () => {
     const store = createSessionStore({
       initialSession: createEmptySession({ id: 'session-1' }),
@@ -222,6 +240,46 @@ describe('TrackController mixer setters', () => {
       'setTrackVolume failed'
     );
     expect(store.getState().tracksById['track-1'].volume).toBe(volumeBefore);
+  });
+
+  it('does not update the session when audio mute, solo, or pan changes fail', async () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      setTrackMute(): void {
+        throw new Error('setTrackMute failed');
+      }
+
+      setTrackSolo(): void {
+        throw new Error('setTrackSolo failed');
+      }
+
+      setTrackPan(): void {
+        throw new Error('setTrackPan failed');
+      }
+    })();
+    const controller = new TrackController({
+      sessionStore: store,
+      audioEngine: audio,
+      idGenerator: fixedIdGenerator(),
+    });
+    await controller.addTrack();
+
+    expect(() => controller.setTrackMute('track-1', true)).toThrow(
+      'setTrackMute failed'
+    );
+    expect(() => controller.setTrackSolo('track-1', true)).toThrow(
+      'setTrackSolo failed'
+    );
+    expect(() => controller.setTrackPan('track-1', 0.5)).toThrow(
+      'setTrackPan failed'
+    );
+
+    const track = store.getState().tracksById['track-1'];
+    expect(track.muted).toBe(false);
+    expect(track.soloed).toBe(false);
+    expect(track.pan).toBe(0);
   });
 });
 
@@ -284,7 +342,7 @@ describe('TrackController.addRegionFromAsset', () => {
   });
 
   it('throws TrackNotFoundError when the track does not exist', async () => {
-    const { controller } = setup();
+    const { controller, recorder } = setup();
 
     await expect(
       controller.addRegionFromAsset({
@@ -293,6 +351,8 @@ describe('TrackController.addRegionFromAsset', () => {
         startTime: 0,
       })
     ).rejects.toThrow(TrackNotFoundError);
+    expect(recorder.getCalls('getAssetDuration')).toHaveLength(0);
+    expect(recorder.getCalls('addRegion')).toHaveLength(0);
   });
 });
 
@@ -456,6 +516,28 @@ describe('TrackController.moveRegion / resizeRegion / removeRegion', () => {
     ).toBeDefined();
   });
 
+  it('does not call audio when the target region is missing', () => {
+    expect(() =>
+      harness.controller.moveRegion({
+        trackId: 'track-1',
+        regionId: 'missing',
+        startTime: 5,
+      })
+    ).toThrow(RegionNotFoundError);
+    expect(() =>
+      harness.controller.resizeRegion({
+        trackId: 'track-1',
+        regionId: 'missing',
+        duration: 2,
+      })
+    ).toThrow(RegionNotFoundError);
+    expect(() => harness.controller.removeRegion('track-1', 'missing')).toThrow(
+      RegionNotFoundError
+    );
+
+    expect(harness.recorder.calls).toEqual([]);
+  });
+
   it('removeRegion throws RegionNotFoundError when missing', () => {
     expect(() => harness.controller.removeRegion('track-1', 'missing')).toThrow(
       RegionNotFoundError
@@ -578,6 +660,7 @@ describe('TrackController.splitRegion', () => {
   it('throws RegionNotFoundError when the source region does not exist', async () => {
     const harness = setup();
     await harness.controller.addTrack();
+    harness.recorder.reset();
 
     expect(() =>
       harness.controller.splitRegion({
@@ -586,5 +669,6 @@ describe('TrackController.splitRegion', () => {
         splitTime: 1,
       })
     ).toThrow(RegionNotFoundError);
+    expect(harness.recorder.calls).toEqual([]);
   });
 });

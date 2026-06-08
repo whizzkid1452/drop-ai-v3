@@ -162,6 +162,43 @@ describe('PlaybackController', () => {
     ]);
   });
 
+  it('handleLoop leaves the session unchanged when audio.setLoop fails', () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      setLoop(): void {
+        throw new Error('setLoop failed');
+      }
+    })();
+    const controller = new PlaybackController({
+      sessionStore: store,
+      audioEngine: audio,
+    });
+
+    expect(() =>
+      controller.handleLoop({ start: 1, end: 5, enabled: true })
+    ).toThrow('setLoop failed');
+    expect(store.getState().playback.loop).toEqual({
+      start: 0,
+      end: 4,
+      enabled: false,
+    });
+  });
+
+  it('handleLoop validates the session before calling audio', () => {
+    expect(() =>
+      h.controller.handleLoop({ start: 5, end: 1, enabled: true })
+    ).toThrow('Loop end must be greater than start');
+
+    expect(h.recorder.getCalls('setLoop')).toHaveLength(0);
+    expect(h.store.getState().playback.loop).toEqual({
+      start: 0,
+      end: 4,
+      enabled: false,
+    });
+  });
+
   it('handleBpm updates session and audio', () => {
     h.controller.handleBpm(140);
 
@@ -169,10 +206,64 @@ describe('PlaybackController', () => {
     expect(h.recorder.getCalls('setBpm')[0].args).toEqual([140]);
   });
 
+  it('handleBpm leaves the session unchanged when audio.setBpm fails', () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      setBpm(): void {
+        throw new Error('setBpm failed');
+      }
+    })();
+    const controller = new PlaybackController({
+      sessionStore: store,
+      audioEngine: audio,
+    });
+
+    expect(() => controller.handleBpm(140)).toThrow('setBpm failed');
+    expect(store.getState().playback.bpm).toBe(120);
+  });
+
+  it('handleBpm validates the session before calling audio', () => {
+    expect(() => h.controller.handleBpm(0)).toThrow('Bpm must be positive');
+
+    expect(h.recorder.getCalls('setBpm')).toHaveLength(0);
+    expect(h.store.getState().playback.bpm).toBe(120);
+  });
+
   it('handleMasterVolume updates session and audio', () => {
     h.controller.handleMasterVolume(0.6);
 
     expect(h.store.getState().playback.masterVolume).toBe(0.6);
     expect(h.recorder.getCalls('setMasterVolume')[0].args).toEqual([0.6]);
+  });
+
+  it('handleMasterVolume leaves the session unchanged when audio.setMasterVolume fails', () => {
+    const store = createSessionStore({
+      initialSession: createEmptySession({ id: 'session-1' }),
+    });
+    const audio = new (class extends FakeAudioEngine {
+      setMasterVolume(): void {
+        throw new Error('setMasterVolume failed');
+      }
+    })();
+    const controller = new PlaybackController({
+      sessionStore: store,
+      audioEngine: audio,
+    });
+
+    expect(() => controller.handleMasterVolume(0.6)).toThrow(
+      'setMasterVolume failed'
+    );
+    expect(store.getState().playback.masterVolume).toBe(1);
+  });
+
+  it('handleMasterVolume validates the session before calling audio', () => {
+    expect(() => h.controller.handleMasterVolume(2)).toThrow(
+      'Master volume must be in [0, 1]'
+    );
+
+    expect(h.recorder.getCalls('setMasterVolume')).toHaveLength(0);
+    expect(h.store.getState().playback.masterVolume).toBe(1);
   });
 });
