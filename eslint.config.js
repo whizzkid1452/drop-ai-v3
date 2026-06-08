@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import ts from 'typescript-eslint';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
 import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
 
 export default ts.config(
   {
@@ -29,6 +30,16 @@ export default ts.config(
       '@typescript-eslint/no-redeclare': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       'no-console': ['warn', { allow: ['warn', 'error'] }],
+    },
+  },
+  {
+    files: ['**/*.tsx'],
+    plugins: {
+      'react-hooks': reactHooks,
+    },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'error',
     },
   },
   {
