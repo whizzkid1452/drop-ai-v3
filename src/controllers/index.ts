@@ -16,7 +16,15 @@ export {
 } from './command-controller';
 export { commandSchema, parseCommand, type AppCommand } from './command.schema';
 export type {
+  AssetRegisterResult,
+  CommandDataByType,
+  CommandDataFor,
   CommandError,
   CommandErrorCode,
   CommandResult,
+  CommandSuccess,
+  RegionAddResult,
+  RegionSplitResult,
+  SessionExportResult,
+  TrackAddResult,
 } from './command-result';

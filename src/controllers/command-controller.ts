@@ -1,5 +1,13 @@
 import { commandSchema, type AppCommand } from './command.schema';
-import type { CommandResult } from './command-result';
+import type {
+  AssetRegisterResult,
+  CommandDataFor,
+  CommandResult,
+  RegionAddResult,
+  RegionSplitResult,
+  SessionExportResult,
+  TrackAddResult,
+} from './command-result';
 
 export interface PlaybackCommandTarget {
   handlePlay(): Promise<void>;
@@ -18,7 +26,7 @@ export interface PlaybackLoopInput {
 }
 
 export interface AssetCommandTarget {
-  registerFileAsset(file: File): Promise<unknown>;
+  registerFileAsset(file: File): Promise<AssetRegisterResult>;
 }
 
 export interface AddRegionFromAssetInput {
@@ -46,21 +54,21 @@ export interface ResizeRegionInput {
 }
 
 export interface TrackCommandTarget {
-  addTrack(): Promise<unknown>;
+  addTrack(): Promise<TrackAddResult>;
   removeTrack(trackId: string): void;
   setTrackVolume(trackId: string, volume: number): void;
   setTrackMute(trackId: string, muted: boolean): void;
   setTrackSolo(trackId: string, soloed: boolean): void;
   setTrackPan(trackId: string, pan: number): void;
-  addRegionFromAsset(input: AddRegionFromAssetInput): Promise<unknown>;
+  addRegionFromAsset(input: AddRegionFromAssetInput): Promise<RegionAddResult>;
   moveRegion(input: MoveRegionInput): void;
-  splitRegion(input: SplitRegionInput): unknown;
+  splitRegion(input: SplitRegionInput): RegionSplitResult;
   resizeRegion(input: ResizeRegionInput): void;
   removeRegion(trackId: string, regionId: string): void;
 }
 
 export interface SessionExportCommandTarget {
-  exportSession(filename?: string): Promise<unknown>;
+  exportSession(filename?: string): Promise<SessionExportResult>;
 }
 
 export interface CommandControllerDependencies {
@@ -88,6 +96,10 @@ export class CommandController {
     this.sessionExportController = sessionExportController;
   }
 
+  public async execute<TCommand extends AppCommand>(
+    rawCommand: TCommand
+  ): Promise<CommandResult<TCommand>>;
+  public async execute(rawCommand: unknown): Promise<CommandResult>;
   public async execute(rawCommand: unknown): Promise<CommandResult> {
     const parseResult = commandSchema.safeParse(rawCommand);
 
@@ -117,7 +129,9 @@ export class CommandController {
     }
   }
 
-  private async dispatch(command: AppCommand): Promise<unknown> {
+  private async dispatch(
+    command: AppCommand
+  ): Promise<CommandDataFor<AppCommand>> {
     switch (command.type) {
       case 'playback.play':
         await this.playbackController.handlePlay();
