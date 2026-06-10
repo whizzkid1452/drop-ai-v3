@@ -28,6 +28,5 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Claude
-.claude/
+.AGENTS
 docs
