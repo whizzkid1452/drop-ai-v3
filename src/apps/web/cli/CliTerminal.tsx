@@ -6,6 +6,7 @@ import { runCli } from '@/apps/cli/cli-runner';
 import { useAppController, useSessionState } from '../AppProvider';
 import type { UploadedSessionInfo } from '../upload/upload-session-flow';
 import { formatCommandResult } from './format-command-result';
+import { downloadSessionExportResult } from './session-export-download';
 import { toPrintableInput } from './terminal-input';
 import { createCliWelcomeText, formatSessionStatus } from './terminal-text';
 import * as styles from './CliTerminal.css';
@@ -84,7 +85,12 @@ export function CliTerminal({ uploadInfo }: CliTerminalProps) {
             if (isDisposed) {
               return;
             }
-            terminal.write(`${formatCommandResult(result)}\r\n${PROMPT}`);
+            const downloadMessage = downloadSessionExportResult(result)
+              ? '\r\nDownload started.'
+              : '';
+            terminal.write(
+              `${formatCommandResult(result)}${downloadMessage}\r\n${PROMPT}`
+            );
           })
           .catch(() => {
             // Keep the Promise queue usable after runCli or terminal.write throws.
