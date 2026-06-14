@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from 'react';
 import { useAppController, useSessionState } from './AppProvider';
+import * as styles from './App.css';
 
 const CliTerminal = lazy(() =>
   import('./cli/CliTerminal').then((module) => ({
@@ -27,31 +28,70 @@ export default function App() {
   }
 
   return (
-    <main data-testid="app-shell">
-      <h1>Drop AI v3</h1>
-      <p>Command-first app shell is ready.</p>
-      <section aria-label="Session summary">
-        <p data-testid="session-id">Session: {session.id}</p>
-        <p data-testid="track-count">Tracks: {tracks.length}</p>
-        <p data-testid="command-message">{commandMessage}</p>
-      </section>
-      <button data-testid="add-track" type="button" onClick={handleAddTrack}>
-        Add Track
-      </button>
-      <ul data-testid="track-list">
-        {tracks.map((track) => (
-          <li data-testid="track-row" key={track.id}>
-            {track.name}
-          </li>
-        ))}
-      </ul>
-      <section aria-label="CLI terminal">
-        <Suspense
-          fallback={<p data-testid="cli-terminal-loading">Loading CLI</p>}
+    <main className={styles.appShell} data-testid="app-shell">
+      <header className={styles.hero}>
+        <div>
+          <p className={styles.eyebrow}>Command-first DAW shell</p>
+          <h1 className={styles.title}>Drop AI v3</h1>
+          <p className={styles.subtitle}>
+            Browser UI reads the session state and sends write actions through
+            the command boundary.
+          </p>
+        </div>
+        <button
+          className={styles.primaryButton}
+          data-testid="add-track"
+          type="button"
+          onClick={handleAddTrack}
         >
-          <CliTerminal />
-        </Suspense>
-      </section>
+          Add Track
+        </button>
+      </header>
+      <div className={styles.layoutGrid}>
+        <section className={styles.panel} aria-label="Session summary">
+          <h2 className={styles.sectionTitle}>Session</h2>
+          <div className={styles.summaryGrid}>
+            <div className={styles.summaryItem}>
+              <span className={styles.summaryLabel}>Session</span>
+              <p className={styles.summaryValue} data-testid="session-id">
+                {session.id}
+              </p>
+            </div>
+            <div className={styles.summaryItem}>
+              <span className={styles.summaryLabel}>Tracks</span>
+              <p className={styles.summaryValue} data-testid="track-count">
+                {tracks.length}
+              </p>
+            </div>
+          </div>
+          <p className={styles.commandMessage} data-testid="command-message">
+            {commandMessage}
+          </p>
+          <ul className={styles.trackList} data-testid="track-list">
+            {tracks.map((track) => (
+              <li
+                className={styles.trackRow}
+                data-testid="track-row"
+                key={track.id}
+              >
+                {track.name}
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section className={styles.terminalPanel} aria-label="CLI terminal">
+          <h2 className={styles.sectionTitle}>CLI</h2>
+          <Suspense
+            fallback={
+              <p className={styles.loading} data-testid="cli-terminal-loading">
+                Loading CLI
+              </p>
+            }
+          >
+            <CliTerminal />
+          </Suspense>
+        </section>
+      </div>
     </main>
   );
 }
