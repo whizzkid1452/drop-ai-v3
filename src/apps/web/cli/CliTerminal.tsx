@@ -3,23 +3,30 @@ import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { useEffect, useRef } from 'react';
 import { runCli } from '@/apps/cli/cli-runner';
-import { useAppController } from '../AppProvider';
+import { useAppController, useSessionState } from '../AppProvider';
+import type { WebSessionState } from '../AppProvider';
+import type { UploadedSessionInfo } from '../App';
 import { formatCommandResult } from './format-command-result';
 import * as styles from './CliTerminal.css';
 
 const PROMPT = 'drop-ai> ';
-const HELP_TEXT = [
-  'Drop AI CLI',
-  'Commands: track add, play, pause, stop, bpm <value>, master <0..1>',
-  'Track controls: volume <trackId> <0..1>, mute <trackId> on|off, solo <trackId> on|off, pan <trackId> <-1..1>',
-].join('\r\n');
 
-export function CliTerminal() {
+export interface CliTerminalProps {
+  uploadInfo: UploadedSessionInfo;
+}
+
+export function CliTerminal({ uploadInfo }: CliTerminalProps) {
   const appController = useAppController();
+  const session = useSessionState();
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const inputRef = useRef('');
   const commandQueueRef = useRef(Promise.resolve());
+  const sessionRef = useRef(session);
+
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -45,7 +52,7 @@ export function CliTerminal() {
     terminal.open(containerRef.current);
     fitTerminal(fitAddon);
     terminal.focus();
-    terminal.write(`${HELP_TEXT}\r\n\r\n${PROMPT}`);
+    terminal.write(`${createHelpText(uploadInfo)}\r\n\r\n${PROMPT}`);
     terminalRef.current = terminal;
 
     const resizeObserver = new ResizeObserver(() => fitTerminal(fitAddon));
@@ -68,7 +75,11 @@ export function CliTerminal() {
 
         commandQueueRef.current = commandQueueRef.current
           .then(async () => {
-            const result = await runCli(input, { appController });
+            const result = await runCli(input, {
+              appController,
+              getStatusText: () => formatSessionStatus(sessionRef.current),
+              uploadInfo,
+            });
             if (isDisposed) {
               return;
             }
@@ -103,7 +114,7 @@ export function CliTerminal() {
       terminal.dispose();
       terminalRef.current = null;
     };
-  }, [appController]);
+  }, [appController, uploadInfo]);
 
   return (
     <div
@@ -113,6 +124,42 @@ export function CliTerminal() {
       onClick={() => terminalRef.current?.focus()}
     />
   );
+}
+
+function formatSessionStatus(session: WebSessionState): string {
+  const regionCount = session.trackOrder.reduce((count, trackId) => {
+    return count + session.tracksById[trackId].regionOrder.length;
+  }, 0);
+
+  return [
+    `Session: ${session.id}`,
+    `Tracks: ${session.trackOrder.length}`,
+    `Regions: ${regionCount}`,
+    `Playing: ${session.playback.playing ? 'yes' : 'no'}`,
+    `Position: ${session.playback.positionSeconds}s`,
+  ].join('\n');
+}
+
+function createHelpText(uploadInfo: UploadedSessionInfo): string {
+  return [
+    'Drop AI CLI',
+    '',
+    'Uploaded:',
+    `  file: ${uploadInfo.filename}`,
+    `  assetId: ${uploadInfo.assetId}`,
+    `  trackId: ${uploadInfo.trackId}`,
+    `  regionId: ${uploadInfo.regionId}`,
+    `  duration: ${uploadInfo.duration}s`,
+    '',
+    'Start:',
+    '  commands',
+    `  region split ${uploadInfo.trackId} ${uploadInfo.regionId} 1`,
+    `  session export ${uploadInfo.filename.replace(/\.[^.]*$/, '')}.wav`,
+    '',
+    'Help:',
+    '  help',
+    '  status',
+  ].join('\r\n');
 }
 
 function fitTerminal(fitAddon: FitAddon): void {

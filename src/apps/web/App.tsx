@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from 'react';
 import { useAppController, useSessionState } from './AppProvider';
+import { UploadDropzone } from './upload/UploadDropzone';
 import * as styles from './App.css';
 
 const CliTerminal = lazy(() =>
@@ -8,23 +9,88 @@ const CliTerminal = lazy(() =>
   }))
 );
 
+export interface UploadedSessionInfo {
+  assetId: string;
+  duration: number;
+  filename: string;
+  regionId: string;
+  trackId: string;
+}
+
+type UploadFlowState =
+  | { status: 'empty' }
+  | { status: 'uploading'; filename: string }
+  | { status: 'failed'; message: string }
+  | ({ status: 'ready' } & UploadedSessionInfo);
+
 export default function App() {
   const controller = useAppController();
   const session = useSessionState();
-  const [commandMessage, setCommandMessage] = useState('Ready');
+  const [uploadFlow, setUploadFlow] = useState<UploadFlowState>({
+    status: 'empty',
+  });
   const tracks = session.trackOrder.map(
     (trackId) => session.tracksById[trackId]
   );
 
-  async function handleAddTrack() {
-    const result = await controller.executeCommand({ type: 'track.add' });
+  async function handleFileAccepted(file: File): Promise<void> {
+    setUploadFlow({ status: 'uploading', filename: file.name });
 
-    if (result.ok) {
-      setCommandMessage(`Added ${result.data.id}`);
+    const assetResult = await controller.executeCommand({
+      type: 'asset.register',
+      payload: { file },
+    });
+
+    if (!assetResult.ok) {
+      setUploadFlow({ status: 'failed', message: assetResult.error.message });
       return;
     }
 
-    setCommandMessage(result.error.message);
+    const trackResult = await controller.executeCommand({ type: 'track.add' });
+
+    if (!trackResult.ok) {
+      setUploadFlow({ status: 'failed', message: trackResult.error.message });
+      return;
+    }
+
+    const regionResult = await controller.executeCommand({
+      type: 'region.add',
+      payload: {
+        assetId: assetResult.data.id,
+        startTime: 0,
+        trackId: trackResult.data.id,
+      },
+    });
+
+    if (!regionResult.ok) {
+      setUploadFlow({ status: 'failed', message: regionResult.error.message });
+      return;
+    }
+
+    setUploadFlow({
+      status: 'ready',
+      assetId: assetResult.data.id,
+      duration: assetResult.data.duration,
+      filename: file.name,
+      regionId: regionResult.data.id,
+      trackId: trackResult.data.id,
+    });
+  }
+
+  if (uploadFlow.status !== 'ready') {
+    return (
+      <main className={styles.appShell} data-testid="app-shell">
+        <UploadDropzone
+          disabled={uploadFlow.status === 'uploading'}
+          errorMessage={
+            uploadFlow.status === 'failed' ? uploadFlow.message : undefined
+          }
+          onFileAccepted={(file) => {
+            void handleFileAccepted(file);
+          }}
+        />
+      </main>
+    );
   }
 
   return (
@@ -38,14 +104,6 @@ export default function App() {
             the command boundary.
           </p>
         </div>
-        <button
-          className={styles.primaryButton}
-          data-testid="add-track"
-          type="button"
-          onClick={handleAddTrack}
-        >
-          Add Track
-        </button>
       </header>
       <div className={styles.layoutGrid}>
         <section className={styles.panel} aria-label="Session summary">
@@ -65,7 +123,8 @@ export default function App() {
             </div>
           </div>
           <p className={styles.commandMessage} data-testid="command-message">
-            {commandMessage}
+            Imported {uploadFlow.filename} as {uploadFlow.assetId}. Start with
+            commands or session export.
           </p>
           <ul className={styles.trackList} data-testid="track-list">
             {tracks.map((track) => (
@@ -88,7 +147,7 @@ export default function App() {
               </p>
             }
           >
-            <CliTerminal />
+            <CliTerminal uploadInfo={uploadFlow} />
           </Suspense>
         </section>
       </div>
