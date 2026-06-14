@@ -57,8 +57,66 @@ describe('runCli', () => {
     });
 
     expect(result.ok).toBe(true);
-    if (result.ok) {
+    if (result.ok && !('kind' in result)) {
       expect(result.data).toMatchObject({ filename: 'mix.wav' });
+    }
+  });
+
+  it('handles help and commands without changing the session', async () => {
+    const app = setup();
+
+    const helpResult = await runCli('help', { appController: app.controller });
+    const commandsResult = await runCli('commands', {
+      appController: app.controller,
+    });
+
+    expect(helpResult).toMatchObject({
+      ok: true,
+      kind: 'local',
+    });
+    if ('kind' in helpResult) {
+      expect(helpResult.output).toContain('Drop AI CLI');
+    }
+    expect(commandsResult).toMatchObject({
+      ok: true,
+      kind: 'local',
+    });
+    if ('kind' in commandsResult) {
+      expect(commandsResult.output).toContain('region split');
+    }
+    expect(app.sessionReader.getState().trackOrder).toEqual([]);
+  });
+
+  it('prints a status summary from the current session', async () => {
+    const app = setup();
+    await runCli('track add', { appController: app.controller });
+
+    const result = await runCli('status', {
+      appController: app.controller,
+      getStatusText: () => {
+        const session = app.sessionReader.getState();
+        return [
+          `Session: ${session.id}`,
+          `Tracks: ${session.trackOrder.length}`,
+        ].join('\n');
+      },
+      uploadInfo: {
+        assetId: 'asset-1',
+        duration: 4,
+        filename: 'loop.wav',
+        regionId: 'region-1',
+        trackId: 'track-1',
+      },
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      kind: 'local',
+    });
+    if ('kind' in result) {
+      expect(result.output).toContain('Session: session-1');
+      expect(result.output).toContain('Tracks: 1');
+      expect(result.output).toContain('Uploaded asset: asset-1');
     }
   });
 

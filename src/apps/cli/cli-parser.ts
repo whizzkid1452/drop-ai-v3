@@ -77,6 +77,9 @@ function toCommand(name: string, args: string[]): CliParseResult {
     case 'session':
       return parseSession(args);
 
+    case 'export':
+      return parseSessionExport(args);
+
     default:
       return failure(`Unknown command: ${name}.`);
   }
@@ -344,14 +347,18 @@ function parseSession(args: string[]): CliParseResult {
 
   switch (subcommand) {
     case 'export':
-      return success({
-        type: 'session.export',
-        payload: rest.length > 0 ? { filename: rest.join(' ') } : undefined,
-      });
+      return parseSessionExport(rest);
 
     default:
       return failure('Unknown session subcommand. Use "export".');
   }
+}
+
+function parseSessionExport(args: string[]): CliParseResult {
+  return success({
+    type: 'session.export',
+    payload: args.length > 0 ? { filename: args.join(' ') } : undefined,
+  });
 }
 
 function parseRequiredNumber(

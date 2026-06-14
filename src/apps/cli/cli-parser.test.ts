@@ -98,6 +98,13 @@ describe('parseCliInput', () => {
         payload: { filename: 'final mix.wav' },
       },
     });
+    expect(parseCliInput('export final mix.wav')).toEqual({
+      ok: true,
+      command: {
+        type: 'session.export',
+        payload: { filename: 'final mix.wav' },
+      },
+    });
   });
 
   it('returns a parser error for missing or unknown commands', () => {
