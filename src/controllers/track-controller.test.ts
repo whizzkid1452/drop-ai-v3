@@ -203,15 +203,15 @@ describe('TrackController mixer setters', () => {
   });
 
   it('does not call audio when the mixer target track is missing', () => {
-    expect(() =>
-      harness.controller.setTrackVolume('missing', 0.5)
-    ).toThrow(TrackNotFoundError);
-    expect(() =>
-      harness.controller.setTrackMute('missing', true)
-    ).toThrow(TrackNotFoundError);
-    expect(() =>
-      harness.controller.setTrackSolo('missing', true)
-    ).toThrow(TrackNotFoundError);
+    expect(() => harness.controller.setTrackVolume('missing', 0.5)).toThrow(
+      TrackNotFoundError
+    );
+    expect(() => harness.controller.setTrackMute('missing', true)).toThrow(
+      TrackNotFoundError
+    );
+    expect(() => harness.controller.setTrackSolo('missing', true)).toThrow(
+      TrackNotFoundError
+    );
     expect(() => harness.controller.setTrackPan('missing', 0.5)).toThrow(
       TrackNotFoundError
     );

@@ -16,7 +16,9 @@ export class AssetController implements AssetCommandTarget {
     this.idGenerator = deps.idGenerator;
   }
 
-  async registerFileAsset(file: File): Promise<{ id: string; duration: number }> {
+  async registerFileAsset(
+    file: File
+  ): Promise<{ id: string; duration: number }> {
     const assetId = this.idGenerator.next('asset');
     const { duration } = await this.audioEngine.importFileAsset(assetId, file);
     return { id: assetId, duration };
