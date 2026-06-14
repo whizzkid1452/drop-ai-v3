@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { runCli } from '@/apps/cli/cli-runner';
 import { useAppController } from '../AppProvider';
 import { formatCommandResult } from './format-command-result';
+import * as styles from './CliTerminal.css';
 
 const PROMPT = 'drop-ai> ';
 const HELP_TEXT = [
@@ -106,17 +107,10 @@ export function CliTerminal() {
 
   return (
     <div
+      className={styles.terminalHost}
       data-testid="cli-terminal"
       ref={containerRef}
       onClick={() => terminalRef.current?.focus()}
-      style={{
-        background: '#101214',
-        border: '1px solid #2b3036',
-        height: 280,
-        minHeight: 220,
-        overflow: 'hidden',
-        padding: 8,
-      }}
     />
   );
 }
