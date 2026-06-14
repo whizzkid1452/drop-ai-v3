@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Drop AI">
+  <rect width="64" height="64" rx="14" fill="#111827" />
+  <path d="M32 10 50 31.5C58 41 51.2 56 38.8 56H25.2C12.8 56 6 41 14 31.5L32 10Z" fill="#22c55e" />
+  <path d="M24 37.5 32 24l8 13.5h-6.2V47h-3.6v-9.5H24Z" fill="#0f172a" />
+  <circle cx="44" cy="19" r="5" fill="#38bdf8" />
+</svg>
