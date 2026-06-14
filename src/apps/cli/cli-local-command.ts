@@ -1,3 +1,5 @@
+import { formatCliCommandList } from './command-registry';
+
 export interface CliUploadInfo {
   assetId: string;
   duration: number;
@@ -28,7 +30,7 @@ export function runLocalCommand(
       return local(formatHelp(deps.uploadInfo));
 
     case 'commands':
-      return local(COMMANDS_TEXT);
+      return local(formatCliCommandList());
 
     case 'status':
       return local(formatStatus(deps));
@@ -69,37 +71,6 @@ function formatHelp(uploadInfo?: CliUploadInfo): string {
     'Use "status" to inspect the session.',
   ].join('\n');
 }
-
-const COMMANDS_TEXT = [
-  'Playback:',
-  '  play',
-  '  pause',
-  '  stop',
-  '  seek <seconds>',
-  '  loop <start> <end>',
-  '  loop off',
-  '  bpm <value>',
-  '  master <0..1>',
-  '',
-  'Track:',
-  '  track add',
-  '  track remove <trackId>',
-  '  volume <trackId> <0..1>',
-  '  mute <trackId> on|off',
-  '  solo <trackId> on|off',
-  '  pan <trackId> <-1..1>',
-  '',
-  'Region:',
-  '  region add <trackId> <assetId> [startTime]',
-  '  region move <trackId> <regionId> <startTime>',
-  '  region split <trackId> <regionId> <splitTime>',
-  '  region resize <trackId> <regionId> <duration>',
-  '  region remove <trackId> <regionId>',
-  '',
-  'Session:',
-  '  session export [filename]',
-  '  export [filename]',
-].join('\n');
 
 function formatStatus({
   getStatusText,
