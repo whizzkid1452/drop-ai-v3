@@ -27,7 +27,7 @@ const CLI_COMMAND_GROUPS: CliCommandGroup[] = [
   'Session',
 ];
 
-export const cliCommandRegistry: CliCommandDefinition[] = [
+export const cliCommandRegistry = [
   command({
     group: 'Playback',
     usage: 'play',
@@ -179,7 +179,9 @@ export const cliCommandRegistry: CliCommandDefinition[] = [
     prefix: ['export'],
     parse: parseExportAlias,
   }),
-];
+] as const satisfies readonly CliCommandDefinition[];
+
+export type CliCommandUsage = (typeof cliCommandRegistry)[number]['usage'];
 
 export function parseRegisteredCliCommand(tokens: string[]): CliParseResult {
   const definition = cliCommandRegistry.find((candidate) =>
@@ -205,7 +207,7 @@ export function formatCliCommandList(): string {
     .join('\n');
 }
 
-function command({
+function command<TUsage extends string>({
   description,
   group,
   parse,
@@ -213,7 +215,8 @@ function command({
   usage,
 }: Omit<CliCommandDefinition, 'matches'> & {
   prefix: string[];
-}): CliCommandDefinition {
+  usage: TUsage;
+}): CliCommandDefinition & { usage: TUsage } {
   return {
     description,
     group,
