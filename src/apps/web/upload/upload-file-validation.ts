@@ -1,11 +1,22 @@
-const AUDIO_FILE_EXTENSIONS = new Set([
-  'aac',
-  'flac',
-  'm4a',
-  'mp3',
-  'ogg',
+export const SUPPORTED_AUDIO_FILE_EXTENSIONS = [
   'wav',
-]);
+  'mp3',
+  'm4a',
+  'aac',
+  'ogg',
+  'flac',
+] as const;
+
+export const SUPPORTED_AUDIO_FILE_ACCEPT = SUPPORTED_AUDIO_FILE_EXTENSIONS.map(
+  (extension) => `.${extension}`
+).join(',');
+
+const SUPPORTED_AUDIO_FILE_EXTENSION_SET: ReadonlySet<string> = new Set(
+  SUPPORTED_AUDIO_FILE_EXTENSIONS
+);
+
+const SUPPORTED_AUDIO_FILE_MESSAGE =
+  'Use a supported audio file: wav, mp3, m4a, aac, ogg, or flac.';
 
 export type FileValidationResult =
   | { ok: true }
@@ -18,18 +29,14 @@ export function validateAudioFile(
     return { ok: false, message: 'Select an audio file.' };
   }
 
-  if (file.type.startsWith('audio/')) {
-    return { ok: true };
-  }
-
   const extension = getFileExtension(file.name);
-  if (extension && AUDIO_FILE_EXTENSIONS.has(extension)) {
+  if (extension && SUPPORTED_AUDIO_FILE_EXTENSION_SET.has(extension)) {
     return { ok: true };
   }
 
   return {
     ok: false,
-    message: 'Use a supported audio file: wav, mp3, m4a, aac, ogg, or flac.',
+    message: SUPPORTED_AUDIO_FILE_MESSAGE,
   };
 }
 
