@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { validateAudioFile } from './upload-file-validation';
+import {
+  SUPPORTED_AUDIO_FILE_ACCEPT,
+  validateAudioFile,
+} from './upload-file-validation';
 import * as styles from './UploadDropzone.css';
 
 export interface UploadDropzoneProps {
@@ -53,7 +56,7 @@ export function UploadDropzone({
           }}
         >
           <input
-            accept="audio/*,.wav,.mp3,.m4a,.aac,.ogg,.flac"
+            accept={SUPPORTED_AUDIO_FILE_ACCEPT}
             className={styles.fileInput}
             data-testid="upload-file-input"
             disabled={disabled}
