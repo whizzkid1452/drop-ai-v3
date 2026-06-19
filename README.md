@@ -1,32 +1,53 @@
 # Drop AI v3
 
-Drop AI v3는 command-first 구조를 검증하기 위한 브라우저 기반 DAW(Digital Audio Workstation) MVP다.
+Drop AI v3는 브라우저에서 실제 오디오 파일을 업로드하고, 편집하고, 재생하고, WAV로 export할 수 있는 lightweight DAW(Digital Audio Workstation)를 목표로 한다.
 
-여기서 command-first는 편집 의도를 `type`과 `payload`를 가진 plain object로 표현하고, Web UI와 인앱 CLI가 같은 `AppController.executeCommand()` 실행 경계를 통과한다는 뜻이다.
+`command-first`는 제품 목표가 아니라 내부 설계 원칙이다. 편집 의도를 `type`과 `payload`를 가진 plain object로 표현하고, Web UI와 인앱 CLI가 같은 `AppController.executeCommand()` 실행 경계를 통과하게 해서 UI, CLI, agent, plugin 같은 입력 경로가 같은 편집 코어를 공유하도록 한다.
 
-## Current Status
+## Product Goal
 
-현재 구현된 1차 MVP 흐름은 다음과 같다.
+우선순위는 "구조 검증"이 아니라 사용자가 체감할 수 있는 작동 흐름이다.
 
 ```txt
 오디오 파일 업로드
 -> asset.register
 -> track.add
 -> region.add
--> 인앱 CLI 표시
--> CLI 명령으로 세션 편집
--> session.export 또는 export 명령
--> 브라우저 다운로드 시작
+-> 실제 재생
+-> region 편집
+-> 실제 export
+-> 필요하면 프로젝트 저장/복원
 ```
 
-현재 기본 앱 조립은 `FakeAudioEngine`을 사용한다. 따라서 개발 서버에서 확인하는 기본 동작은 command/session 흐름 검증에 가깝다. `ToneAudioEngine` 구현과 테스트는 존재하지만, 기본 Web composition에는 아직 연결되어 있지 않다.
+작동하는 프로젝트의 기준은 다음과 같다.
 
-정확히 구분하면 다음과 같다.
+- 파일을 업로드하면 실제 소리가 난다.
+- play, pause, stop, seek가 브라우저에서 체감된다.
+- region move, split, resize가 session state와 실제 재생/export에 반영된다.
+- export한 WAV가 실제 오디오를 담고 있다.
+- 새로고침이나 재방문에도 최소한의 작업 상태를 잃지 않는다.
 
-- 완료: 업로드 진입 화면, 업로드 후 기본 track/region 생성, CLI 편집 명령, export 명령, export 다운로드 트리거
-- 완료: CLI 명령 정의를 `command-registry.ts`에 모으고, parser와 `commands` 출력이 같은 registry를 사용
-- 제한: 기본 실행 경로의 export 파일은 `FakeAudioEngine`이 만든 빈 `audio/wav` Blob이다
-- 미완료: 실제 오디오 디코딩/재생/export를 기본 Web 앱에 연결하는 작업
+## Current Status
+
+현재 코드는 작동하는 DAW로 전환 중이다.
+
+완료된 기반:
+
+- 업로드 진입 화면
+- 업로드 후 기본 asset, track, region 생성
+- 인앱 CLI 표시
+- CLI 편집 명령
+- `session.export` / `export` 명령과 다운로드 트리거
+- CLI 명령 정의를 `command-registry.ts`에 모으고 parser와 `commands` 출력이 같은 registry를 사용
+- `ToneAudioEngine` 구현과 테스트
+
+아직 제품 기준으로 부족한 부분:
+
+- 기본 Web composition은 아직 `FakeAudioEngine`을 사용한다.
+- 기본 실행 경로의 export 파일은 빈 `audio/wav` Blob이다.
+- 실제 오디오 디코딩, 재생, export가 기본 Web 앱에 연결되어야 한다.
+- timeline/waveform 기반의 직접 편집 UI는 아직 없다.
+- 프로젝트 저장/복원은 아직 없다.
 
 ## Prerequisites
 
@@ -50,7 +71,9 @@ pnpm dev
 http://localhost:5173/
 ```
 
-## MVP Usage
+## Usage
+
+현재 사용 가능한 흐름:
 
 1. 첫 화면에서 오디오 파일을 선택하거나 드래그앤드롭한다.
 2. 업로드가 성공하면 앱이 자동으로 asset, track, region을 만든다.
@@ -71,9 +94,9 @@ export mix.wav
 
 실제 ID는 실행 환경의 `idGenerator`에 따라 달라질 수 있다. 화면과 CLI welcome text에 표시된 값을 기준으로 입력한다.
 
-## Verification
+## Quality Checks
 
-개별 검증 명령은 다음과 같다.
+개별 확인 명령은 다음과 같다.
 
 ```sh
 pnpm typecheck
@@ -88,13 +111,23 @@ pnpm build
 pnpm check
 ```
 
-수동 QA에서는 다음 흐름을 확인한다.
+수동 QA에서는 현재 구현과 목표 구현을 구분한다.
+
+현재 구현에서 확인할 항목:
 
 - 첫 진입 시 업로드 화면만 보이는지
 - 파일 업로드 후 세션 요약과 CLI가 표시되는지
 - `help`, `commands`, `status`가 세션을 변경하지 않고 출력만 수행하는지
 - region 편집 명령이 세션 요약에 반영되는지
 - `export <filename>` 실행 후 다운로드가 시작되는지
+
+작동하는 DAW 기준으로 추가 확인할 항목:
+
+- 업로드한 파일이 실제로 재생되는지
+- playback command가 실제 transport에 반영되는지
+- region 편집이 실제 재생 위치와 export 결과에 반영되는지
+- export한 WAV를 외부 플레이어에서 열었을 때 실제 오디오가 들리는지
+- 새로고침 후 저장된 프로젝트를 복원할 수 있는지
 
 ## Command Surface
 
@@ -165,7 +198,8 @@ Apps
 - CLI 문자열 입력은 registry parser를 거쳐 `AppCommand`로 변환된다.
 - `commandSchema`는 controller 실행 전에 command payload를 검증한다.
 - Controller는 `IAudioEngine` 인터페이스에 의존한다.
-- `FakeAudioEngine`과 `ToneAudioEngine`은 교체 가능한 구현체다.
+- `ToneAudioEngine`은 제품 실행 경로의 기본 구현이 되어야 한다.
+- `FakeAudioEngine`은 테스트와 격리된 개발 확인을 위한 구현체로 둔다.
 - 객체 생성과 의존성 조립은 composition root에서 수행한다.
 
 ## Project Layout
@@ -177,31 +211,29 @@ src/controllers     command schema and domain controllers
 src/session         in-memory session state and operations
 src/audio-engine    IAudioEngine, FakeAudioEngine, ToneAudioEngine
 src/composition     application composition root
-docs                planning and architecture notes
-AGENTS              project conventions
+work-log            decision logs and architecture notes
 ```
 
-## Non-Goals
+## Roadmap
 
-현재 1차 MVP 범위가 아닌 항목은 다음과 같다.
+작동하는 프로젝트를 만들기 위한 추천 구현 순서는 다음과 같다.
 
-- 프로젝트 저장과 복원
+1. `ToneAudioEngine`을 기본 Web composition에 연결한다.
+2. 실제 오디오 파일 기준으로 업로드, 재생, seek, stop을 수동 QA한다.
+3. `session.export`가 실제 WAV를 생성하는지 확인하고 실패 케이스를 정리한다.
+4. transport UI를 추가해 CLI 없이도 play, pause, stop, seek를 사용할 수 있게 한다.
+5. 최소 timeline UI를 추가해 track과 region을 눈으로 확인하고 편집할 수 있게 한다.
+6. region move, split, resize가 실제 재생과 export에 반영되도록 QA를 고정한다.
+7. IndexedDB 기반 프로젝트 저장/복원을 추가한다.
+8. 다중 파일 업로드와 asset 관리 UI를 추가한다.
+
+## Later
+
+다음 항목은 작동하는 single-user DAW 흐름이 안정된 뒤 확장한다.
+
 - backend 업로드
 - 결제 기능
 - Plugin SDK
-- 다중 파일 업로드
-- 완성형 waveform/timeline UI
 - AI 자동 작곡 workflow
 - `@drop-ai/core` 패키지 배포
-
-이 항목들은 구현하지 않겠다는 뜻이 아니라, 현재 MVP 완료 조건에 포함하지 않았다는 뜻이다.
-
-## Next Steps
-
-추천 구현 순서는 다음과 같다.
-
-1. `ToneAudioEngine`을 기본 Web composition에 연결한다.
-2. 실제 오디오 파일 기준으로 재생과 export를 수동 QA한다.
-3. command registry의 metadata를 CLI, UI command palette, agent, plugin SDK가 공유할 수 있는 형태로 확장한다.
-4. `@drop-ai/core` 패키지 경계를 분리한다.
-5. 외부 audio engine adapter와 plugin SDK 설계를 문서화한 뒤 구현한다.
+- 외부 audio engine adapter
