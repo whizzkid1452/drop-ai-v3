@@ -1,5 +1,9 @@
 # Drop AI v3 UI, CLI, E2E, Deploy Migration Plan
 
+> 문서 상태: 과거 migration 실행 계획.
+>
+> 현재 제품 목표는 command-first 구조 검증이 아니라 실제로 작동하는 browser lightweight DAW다. 최신 기준은 [README.md](../README.md), [ARCHITECTURE.md](../ARCHITECTURE.md), [docs/README.md](./README.md)를 우선한다.
+
 ## 목적
 
 이 문서는 기존 프로젝트인

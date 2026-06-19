@@ -1,5 +1,9 @@
 # Command-First Rebuild Plan
 
+> Document status: historical rebuild plan.
+>
+> The current product goal is a working browser lightweight DAW, not validating command-first as the end goal. Prefer [README.md](../README.md), [ARCHITECTURE.md](../ARCHITECTURE.md), and [docs/README.md](./README.md) for current direction.
+
 ## Goal
 
 This project rebuild keeps the existing layer discipline while making every
@@ -159,7 +163,7 @@ The first milestone is complete when these three calls produce the same session
 change through the same controller path:
 
 ```ts
-await appController.executeCommand({ type: "track.add" });
+await appController.executeCommand({ type: 'track.add' });
 ```
 
 ```txt

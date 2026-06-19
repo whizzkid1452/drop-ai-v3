@@ -1,5 +1,9 @@
 # drop-ai-v3 Rebuild — 사람이 작업하는 순서 (Step-by-Step Execution)
 
+> 문서 상태: 과거 rebuild step-by-step 실행 기록.
+>
+> 현재 제품 목표는 command-first 구조 검증이 아니라 실제로 작동하는 browser lightweight DAW다. 최신 기준은 [README.md](../README.md), [ARCHITECTURE.md](../ARCHITECTURE.md), [docs/README.md](./README.md)를 우선한다.
+
 ## Context
 
 `drop-ai` (Tone.js + React + Zustand 기반 웹 오디오 편집기)를 `drop-ai-v3`로 command-first 구조로 다시 세우는 실행 계획이다.
@@ -293,6 +297,7 @@ interface PlaybackState {
 - **소요**: M
 
 > **체크포인트 (Phase C 끝)**:
+>
 > - `pnpm test src/layers/core/` 모두 통과
 > - 이 phase의 모든 테스트는 jsdom의 `window`/`document`를 건드리지 않는다 (손으로 점검)
 
@@ -903,20 +908,20 @@ interface PlaybackState {
 
 ## 참조 표 — 원본 drop-ai → v3 step
 
-| 원본 파일 (`/Users/whizzkid/Documents/HURREAY/code/drop-ai/...`) | v3 step | 변형 정도 |
-|---|---|---|
-| `src/layers/session/session.ts` (타입) | Step 6, 7, 10 | **재정의**. Map → `trackOrder + tracksById`. `src` → `assetId`. `isMuted/isSoloed` → `muted/soloed`. playback은 별도 |
-| `src/layers/session/session.ts` (Zustand vanilla 패턴) | Step 20 | **패턴만 차용**. action은 store 외부 operation 함수로 분리 |
-| `src/layers/audio-engine/i-audio-engine.ts` | Step 17 | **거의 그대로**. loadFile → getAssetDuration. debug 메서드 제거. syncSession 추가 |
-| `src/layers/audio-engine/audio-engine.ts` (Tone 매핑) | Step 32–34 | **구현 이식**. 위치는 `audio/tone/`, 이름은 `ToneAudioProvider` |
-| `src/layers/audio-engine/audio-engine.ts` (exportSession Offline) | (deferred) | MVP에서는 미구현 |
-| `src/layers/controllers/playback-controller.ts` | Step 22 | **의도 그대로**. session mutation은 core operation 경유 |
-| `src/layers/controllers/track-controller.ts` | Step 21 | **로직 그대로**. id는 idGenerator 주입. 직접 store action 호출 금지 |
-| `src/layers/controllers/track-controller.ts` (splitRegion 계산) | Step 12 | **계산식 그대로**. 위치는 core operation. id는 외부 주입 |
-| `src/layers/apps/create-app.ts` | Step 29 | **패턴 차용**. 의존성 더 많이 받음 |
-| `src/layers/apps/cli/index.ts` | Step 30 | **참고만**. v3는 parser/runner 분리 |
-| `src/layers/apps/web/ui/components/transport/transport.tsx` | Step 43 | **시각 참고**. 호출은 executeCommand |
-| `src/layers/apps/web/ui/components/track-list/track-list.tsx` | Step 44 | **시각 참고**. 호출은 executeCommand |
+| 원본 파일 (`/Users/whizzkid/Documents/HURREAY/code/drop-ai/...`)  | v3 step       | 변형 정도                                                                                                            |
+| ----------------------------------------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `src/layers/session/session.ts` (타입)                            | Step 6, 7, 10 | **재정의**. Map → `trackOrder + tracksById`. `src` → `assetId`. `isMuted/isSoloed` → `muted/soloed`. playback은 별도 |
+| `src/layers/session/session.ts` (Zustand vanilla 패턴)            | Step 20       | **패턴만 차용**. action은 store 외부 operation 함수로 분리                                                           |
+| `src/layers/audio-engine/i-audio-engine.ts`                       | Step 17       | **거의 그대로**. loadFile → getAssetDuration. debug 메서드 제거. syncSession 추가                                    |
+| `src/layers/audio-engine/audio-engine.ts` (Tone 매핑)             | Step 32–34    | **구현 이식**. 위치는 `audio/tone/`, 이름은 `ToneAudioProvider`                                                      |
+| `src/layers/audio-engine/audio-engine.ts` (exportSession Offline) | (deferred)    | MVP에서는 미구현                                                                                                     |
+| `src/layers/controllers/playback-controller.ts`                   | Step 22       | **의도 그대로**. session mutation은 core operation 경유                                                              |
+| `src/layers/controllers/track-controller.ts`                      | Step 21       | **로직 그대로**. id는 idGenerator 주입. 직접 store action 호출 금지                                                  |
+| `src/layers/controllers/track-controller.ts` (splitRegion 계산)   | Step 12       | **계산식 그대로**. 위치는 core operation. id는 외부 주입                                                             |
+| `src/layers/apps/create-app.ts`                                   | Step 29       | **패턴 차용**. 의존성 더 많이 받음                                                                                   |
+| `src/layers/apps/cli/index.ts`                                    | Step 30       | **참고만**. v3는 parser/runner 분리                                                                                  |
+| `src/layers/apps/web/ui/components/transport/transport.tsx`       | Step 43       | **시각 참고**. 호출은 executeCommand                                                                                 |
+| `src/layers/apps/web/ui/components/track-list/track-list.tsx`     | Step 44       | **시각 참고**. 호출은 executeCommand                                                                                 |
 
 ---
 

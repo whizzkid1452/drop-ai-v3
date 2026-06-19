@@ -1,5 +1,9 @@
 # Drop AI v3 Rebuild Execution Plan
 
+> 문서 상태: 과거 rebuild 실행 계획.
+>
+> 현재 제품 목표는 command-first 구조 검증이 아니라 실제로 작동하는 browser lightweight DAW다. 최신 기준은 [README.md](../README.md), [ARCHITECTURE.md](../ARCHITECTURE.md), [docs/README.md](./README.md)를 우선한다.
+
 ## 이 문서의 목적
 
 이 문서는 `drop-ai-v3`를 command-first 구조로 다시 세우기 위한 실제 작업 계획이다.

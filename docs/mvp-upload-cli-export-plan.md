@@ -1,5 +1,9 @@
 # Drop AI v3 MVP 플랜
 
+> 문서 상태: 업로드, CLI, export 흐름을 만들기 위한 과거 MVP 계획.
+>
+> 현재 목표는 이 MVP를 넘어 실제 오디오 재생, 실제 WAV export, transport UI, timeline, 프로젝트 저장/복원까지 이어지는 작동 가능한 DAW다. 최신 기준은 [README.md](../README.md), [ARCHITECTURE.md](../ARCHITECTURE.md), [docs/README.md](./README.md)를 우선한다.
+
 ## 목표
 
 이번 MVP는 결제, Plugin SDK, 패키지 배포보다 먼저 **파일 업로드부터 기존 편집 명령 실행, export까지 이어지는 하나의 사용자 흐름**을 완성한다.

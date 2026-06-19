@@ -1,5 +1,9 @@
 # Drop AI v3 Final Design and Rebuild Plan
 
+> 문서 상태: 과거 리빌드 설계 기록.
+>
+> 현재 제품 목표는 command-first 구조 검증이 아니라 실제로 작동하는 browser lightweight DAW다. 최신 기준은 [README.md](../README.md), [ARCHITECTURE.md](../ARCHITECTURE.md), [docs/README.md](./README.md)를 우선한다.
+
 ## 결정 요약
 
 `drop-ai-v3`는 현재 v3의 command-first 구조를 유지한다.
@@ -417,7 +421,9 @@ export interface ISessionStore extends ISessionReader {
   applyOperation(transform: (state: SessionState) => SessionState): void;
 }
 
-export function createSessionStore(initialSession: SessionState): ISessionStore {
+export function createSessionStore(
+  initialSession: SessionState
+): ISessionStore {
   const store: StoreApi<SessionState> = createStore<SessionState>(
     () => initialSession
   );
@@ -478,9 +484,7 @@ export function SessionStoreProvider({
   );
 }
 
-export function useSessionSelector<T>(
-  selector: (state: SessionState) => T
-): T {
+export function useSessionSelector<T>(selector: (state: SessionState) => T): T {
   const reader = useContext(SessionReaderContext);
   if (!reader) {
     throw new Error('SessionStoreProvider is missing.');
@@ -575,9 +579,7 @@ export const useEditorUiStore = create<EditorUiState>((set) => ({
 허용:
 
 ```tsx
-const selectedRegionIds = useEditorUiStore(
-  (state) => state.selectedRegionIds
-);
+const selectedRegionIds = useEditorUiStore((state) => state.selectedRegionIds);
 ```
 
 금지:
