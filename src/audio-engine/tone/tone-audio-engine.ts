@@ -5,6 +5,7 @@ import {
   ToneAudioBuffer,
   getDestination,
   getTransport,
+  start as startAudioContext,
 } from 'tone';
 import type { SessionState } from '@/session/session-state';
 import type {
@@ -42,6 +43,7 @@ export class ToneAudioEngine implements IAudioEngine {
   }
 
   async play(): Promise<void> {
+    await startAudioContext();
     const transport = getTransport();
     if (transport.state !== 'started') {
       transport.start();

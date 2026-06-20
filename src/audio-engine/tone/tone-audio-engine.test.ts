@@ -56,6 +56,7 @@ interface ToneState {
     loop: boolean;
     state: string;
   };
+  startAudioContext: ReturnType<typeof vi.fn>;
   destination: { volume: { value: number } };
   channelInstances: ChannelMock[];
   playerInstances: PlayerMock[];
@@ -77,6 +78,7 @@ const toneState: ToneState = {
     loop: false,
     state: 'stopped',
   },
+  startAudioContext: vi.fn(async () => undefined),
   destination: { volume: { value: 0 } },
   channelInstances: [],
   playerInstances: [],
@@ -197,6 +199,7 @@ function createMockAudioBuffer(
 vi.mock('tone', () => ({
   getTransport: () => toneState.transport,
   getDestination: () => toneState.destination,
+  start: toneState.startAudioContext,
   Channel: MockChannelCtor,
   Player: MockPlayerCtor,
   ToneAudioBuffer: MockToneAudioBufferCtor,
@@ -204,6 +207,7 @@ vi.mock('tone', () => ({
 }));
 
 beforeEach(() => {
+  toneState.startAudioContext.mockClear();
   toneState.transport.start.mockClear();
   toneState.transport.pause.mockClear();
   toneState.transport.stop.mockClear();
@@ -232,6 +236,7 @@ describe('ToneAudioEngine transport', () => {
 
     await provider.play();
 
+    expect(toneState.startAudioContext).toHaveBeenCalledTimes(1);
     expect(toneState.transport.start).toHaveBeenCalledTimes(1);
   });
 
@@ -242,6 +247,7 @@ describe('ToneAudioEngine transport', () => {
 
     await provider.play();
 
+    expect(toneState.startAudioContext).toHaveBeenCalledTimes(1);
     expect(toneState.transport.start).not.toHaveBeenCalled();
   });
 
