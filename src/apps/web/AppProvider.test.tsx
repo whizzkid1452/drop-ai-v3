@@ -1,6 +1,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
 import { createApp } from '@/composition/create-app';
 import type { AppController } from '@/controllers/app-controller';
 import { createTestIdGenerator } from '@/testing/id-generator';
@@ -38,6 +39,7 @@ describe('AppProvider', () => {
         <AppProvider
           createAppHandle={() =>
             createApp({
+              audioEngine: new FakeAudioEngine(),
               idGenerator: createTestIdGenerator(),
               sessionId: 'session-test',
             })
@@ -66,6 +68,7 @@ describe('AppProvider', () => {
 
   it('disposes the app handle on unmount', () => {
     const app = createApp({
+      audioEngine: new FakeAudioEngine(),
       idGenerator: createTestIdGenerator(),
       sessionId: 'session-test',
     });

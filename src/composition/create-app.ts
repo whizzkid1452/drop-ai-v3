@@ -1,5 +1,5 @@
 import type { IAudioEngine } from '@/audio-engine/audio-engine';
-import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
+import { ToneAudioEngine } from '@/audio-engine/tone/tone-audio-engine';
 import { AppController } from '@/controllers/app-controller';
 import { AssetController } from '@/controllers/asset-controller';
 import {
@@ -81,7 +81,7 @@ export function composeApp({
 }
 
 export function createApp(options: ICreateAppOptions = {}): IAppHandle {
-  const audioEngine = options.audioEngine ?? new FakeAudioEngine();
+  const audioEngine = options.audioEngine ?? new ToneAudioEngine();
   const idGenerator = options.idGenerator ?? createUuidGenerator();
   const sessionId = options.sessionId ?? DEFAULT_SESSION_ID;
   const sessionStore = createSessionStore({

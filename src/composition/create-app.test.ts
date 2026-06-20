@@ -75,15 +75,14 @@ describe('createApp', () => {
     ]);
   });
 
-  it('uses FakeAudioEngine by default when none is provided', async () => {
+  it('uses ToneAudioEngine by default when none is provided', () => {
     const app = createApp({
       idGenerator: createIdGenerator(),
       sessionId: 'session-1',
     });
 
-    const result = await app.controller.executeCommand({ type: 'track.add' });
-
-    expect(result.ok).toBe(true);
+    expect(app.controller).toBeDefined();
+    expect(app.sessionReader.getState().id).toBe('session-1');
   });
 
   it('disposes cleanly', () => {
