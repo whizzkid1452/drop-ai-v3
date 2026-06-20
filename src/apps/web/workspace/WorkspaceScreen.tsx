@@ -3,6 +3,7 @@ import type { WebSessionState } from '../AppProvider';
 import type { UploadedSessionInfo } from '../upload/upload-session-flow';
 import * as styles from '../App.css';
 import { SessionSummary } from './SessionSummary';
+import { TransportControls } from './TransportControls';
 
 const CliTerminal = lazy(() =>
   import('../cli/CliTerminal').then((module) => ({
@@ -29,7 +30,10 @@ export function WorkspaceScreen({ session, uploadInfo }: WorkspaceScreenProps) {
         </div>
       </header>
       <div className={styles.layoutGrid}>
-        <SessionSummary session={session} uploadInfo={uploadInfo} />
+        <div className={styles.sidePanelStack}>
+          <TransportControls session={session} />
+          <SessionSummary session={session} uploadInfo={uploadInfo} />
+        </div>
         <section className={styles.terminalPanel} aria-label="CLI terminal">
           <h2 className={styles.sectionTitle}>CLI</h2>
           <Suspense

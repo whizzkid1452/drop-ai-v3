@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
 import { createApp, type IAppHandle } from '@/composition/create-app';
+import { createCallRecorder } from '@/testing/call-recorder';
 import App from './App';
 import { AppProvider } from './AppProvider';
 
@@ -38,6 +39,7 @@ describe('App upload-first flow', () => {
 
     expect(queryByTestId(container, 'upload-dropzone')).not.toBeNull();
     expect(queryByTestId(container, 'cli-terminal')).toBeNull();
+    expect(queryByTestId(container, 'transport-play')).toBeNull();
     expect(queryByTestId(container, 'session-id')).toBeNull();
     expect(queryByTestId(container, 'add-track')).toBeNull();
   });
@@ -62,11 +64,46 @@ describe('App upload-first flow', () => {
     expect(getText(container, 'cli-terminal')).toContain('track-1');
     expect(getText(container, 'cli-terminal')).toContain('region-1');
   });
+
+  it('runs transport controls through playback commands', async () => {
+    const { app, container, recorder } = renderApp();
+    const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
+
+    await uploadFile(container, file);
+
+    expect(getText(container, 'transport-time')).toBe('0:00 / 0:04');
+
+    await clickByTestId(container, 'transport-play');
+
+    expect(app.sessionReader.getState().playback.playing).toBe(true);
+    expect(recorder.getCalls('play')).toHaveLength(1);
+
+    await clickByTestId(container, 'transport-pause');
+
+    expect(app.sessionReader.getState().playback.playing).toBe(false);
+    expect(recorder.getCalls('pause')).toHaveLength(1);
+
+    await seek(container, 2.5);
+
+    expect(app.sessionReader.getState().playback.positionSeconds).toBe(2.5);
+    expect(recorder.getCalls('seek')[0].args).toEqual([2.5]);
+
+    await clickByTestId(container, 'transport-stop');
+
+    expect(app.sessionReader.getState().playback.positionSeconds).toBe(0);
+    expect(recorder.getCalls('stop')).toHaveLength(1);
+  });
 });
 
-function renderApp(): { app: IAppHandle; container: HTMLElement } {
+function renderApp(): {
+  app: IAppHandle;
+  container: HTMLElement;
+  recorder: ReturnType<typeof createCallRecorder>;
+} {
+  const recorder = createCallRecorder();
   const app = createApp({
     audioEngine: new FakeAudioEngine({
+      recorder,
       assetDurations: { 'asset-1': 4 },
     }),
     idGenerator: createPerPrefixIdGenerator(),
@@ -83,7 +120,7 @@ function renderApp(): { app: IAppHandle; container: HTMLElement } {
     );
   });
 
-  return { app, container };
+  return { app, container, recorder };
 }
 
 async function uploadFile(container: HTMLElement, file: File): Promise<void> {
@@ -105,6 +142,43 @@ async function uploadFile(container: HTMLElement, file: File): Promise<void> {
   await act(async () => {
     await Promise.resolve();
   });
+}
+
+async function clickByTestId(
+  container: HTMLElement,
+  testId: string
+): Promise<void> {
+  const element = queryByTestId(container, testId);
+
+  if (!(element instanceof HTMLElement)) {
+    throw new Error(`Could not find clickable element "${testId}".`);
+  }
+
+  await act(async () => {
+    element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushMicrotasks();
+  });
+}
+
+async function seek(container: HTMLElement, seconds: number): Promise<void> {
+  const element = queryByTestId(container, 'transport-seek');
+
+  if (!(element instanceof HTMLInputElement)) {
+    throw new Error('Could not find transport seek input.');
+  }
+
+  await act(async () => {
+    element.value = seconds.toString();
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+    await flushMicrotasks();
+  });
+}
+
+async function flushMicrotasks(): Promise<void> {
+  for (let index = 0; index < 5; index += 1) {
+    await Promise.resolve();
+  }
 }
 
 function createPerPrefixIdGenerator() {

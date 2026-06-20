@@ -43,11 +43,12 @@ Drop AI v3는 브라우저에서 실제 오디오 파일을 업로드하고, 편
 - 기본 Web composition의 `ToneAudioEngine` 연결
 - 검증용 WAV 업로드 후 `play`에서 AudioContext 실행과 buffer source scheduling 확인
 - `session.export`가 실제 오디오 샘플을 담은 WAV Blob을 생성하는지 브라우저에서 확인
+- CLI 없이 play, pause, stop, seek를 실행할 수 있는 최소 transport UI
 
 아직 제품 기준으로 부족한 부분:
 
-- CLI 없이 사용할 수 있는 전용 transport UI는 아직 없습니다.
 - timeline/waveform 기반의 직접 편집 UI는 아직 없습니다.
+- transport playhead가 재생 중 실시간으로 진행되지는 않습니다.
 - 프로젝트 저장/복원은 아직 없습니다.
 
 ## 기술 스택
@@ -351,9 +352,9 @@ architecture boundary test는 다음 규칙을 검증합니다.
 
 작동하는 프로젝트를 만들기 위한 추천 구현 순서는 다음과 같습니다.
 
-1. transport UI를 추가해 CLI 없이도 play, pause, stop, seek를 사용할 수 있게 합니다.
-2. 최소 timeline UI를 추가해 track과 region을 눈으로 확인하고 편집할 수 있게 합니다.
-3. region move, split, resize가 실제 재생과 export에 반영되도록 QA를 고정합니다.
+1. 최소 timeline UI를 추가해 track과 region을 눈으로 확인하고 편집할 수 있게 합니다.
+2. region move, split, resize가 실제 재생과 export에 반영되도록 QA를 고정합니다.
+3. transport playhead가 재생 중 진행되도록 session 동기화를 추가합니다.
 4. IndexedDB 기반 프로젝트 저장/복원을 추가합니다.
 5. 다중 파일 업로드와 asset 관리 UI를 추가합니다.
 

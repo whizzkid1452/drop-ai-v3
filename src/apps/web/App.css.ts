@@ -99,6 +99,11 @@ export const panel = style({
   background: vars.color.panel,
 });
 
+export const sidePanelStack = style({
+  display: 'grid',
+  gap: vars.space.lg,
+});
+
 export const terminalPanel = style([
   panel,
   {
@@ -166,6 +171,132 @@ export const trackRow = style({
   padding: `${vars.space.md} ${vars.space.lg}`,
   background: '#15181c',
   color: vars.color.text,
+});
+
+export const transportPanel = style([
+  panel,
+  {
+    display: 'grid',
+    gap: vars.space.md,
+  },
+]);
+
+export const transportHeader = style({
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: vars.space.md,
+});
+
+export const transportTime = style({
+  margin: 0,
+  color: vars.color.textMuted,
+  fontFamily: vars.font.mono,
+  fontSize: 13,
+  whiteSpace: 'nowrap',
+});
+
+export const transportButtonRow = style({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, 44px)',
+  gap: vars.space.sm,
+});
+
+export const transportIconButton = style({
+  display: 'grid',
+  width: 44,
+  height: 40,
+  placeItems: 'center',
+  border: `1px solid ${vars.color.borderStrong}`,
+  borderRadius: vars.radius.control,
+  background: vars.color.panelRaised,
+  color: vars.color.text,
+  cursor: 'pointer',
+  transition:
+    'background 120ms ease, border-color 120ms ease, transform 120ms ease',
+  selectors: {
+    '&:hover:not(:disabled)': {
+      borderColor: vars.color.accent,
+      background: vars.color.surfaceHighlight,
+      transform: 'translateY(-1px)',
+    },
+    '&:focus-visible': {
+      outline: `2px solid ${vars.color.accentStrong}`,
+      outlineOffset: 3,
+    },
+    '&:disabled': {
+      cursor: 'not-allowed',
+      opacity: 0.5,
+    },
+    '&[aria-pressed="true"]': {
+      borderColor: vars.color.accent,
+      background: vars.color.surfaceHighlight,
+    },
+  },
+});
+
+export const playIcon = style({
+  width: 0,
+  height: 0,
+  marginLeft: 3,
+  borderTop: '8px solid transparent',
+  borderBottom: '8px solid transparent',
+  borderLeft: `12px solid ${vars.color.text}`,
+});
+
+export const pauseIcon = style({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, 5px)',
+  gap: 4,
+});
+
+export const pauseBar = style({
+  width: 5,
+  height: 16,
+  background: vars.color.text,
+  borderRadius: 1,
+});
+
+export const stopIcon = style({
+  width: 15,
+  height: 15,
+  borderRadius: 2,
+  background: vars.color.text,
+});
+
+export const seekControl = style({
+  display: 'grid',
+  gap: vars.space.sm,
+});
+
+export const seekSlider = style({
+  width: '100%',
+  accentColor: vars.color.accent,
+});
+
+export const seekNumberControl = style({
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) 96px',
+  alignItems: 'center',
+  gap: vars.space.md,
+});
+
+export const seekNumberInput = style({
+  width: '100%',
+  border: `1px solid ${vars.color.border}`,
+  borderRadius: vars.radius.control,
+  padding: `${vars.space.sm} ${vars.space.md}`,
+  background: vars.color.panelRaised,
+  color: vars.color.text,
+  fontFamily: vars.font.mono,
+  fontSize: 13,
+});
+
+export const transportError = style({
+  margin: 0,
+  color: vars.color.accentStrong,
+  fontFamily: vars.font.mono,
+  fontSize: 13,
 });
 
 export const loading = style({
