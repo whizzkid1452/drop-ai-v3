@@ -40,12 +40,11 @@ Drop AI v3는 브라우저에서 실제 오디오 파일을 업로드하고, 편
 - `session.export` / `export` 명령과 다운로드 트리거
 - CLI 명령 정의를 `command-registry.ts`에 모으고 parser와 `commands` 출력이 같은 registry를 사용
 - `ToneAudioEngine` 구현과 테스트
+- 기본 Web composition의 `ToneAudioEngine` 연결
 
 아직 제품 기준으로 부족한 부분:
 
-- 기본 Web composition은 아직 `FakeAudioEngine`을 사용합니다.
-- 기본 실행 경로의 export 파일은 빈 `audio/wav` Blob입니다.
-- 실제 오디오 디코딩, 재생, export가 기본 Web 앱에 연결되어야 합니다.
+- 업로드한 오디오 파일의 실제 재생과 WAV export는 브라우저에서 수동 QA가 필요합니다.
 - timeline/waveform 기반의 직접 편집 UI는 아직 없습니다.
 - 프로젝트 저장/복원은 아직 없습니다.
 
@@ -353,14 +352,13 @@ architecture boundary test는 다음 규칙을 검증합니다.
 
 작동하는 프로젝트를 만들기 위한 추천 구현 순서는 다음과 같습니다.
 
-1. `ToneAudioEngine`을 기본 Web composition에 연결합니다.
-2. 실제 오디오 파일 기준으로 업로드, 재생, seek, stop을 수동 QA합니다.
-3. `session.export`가 실제 WAV를 생성하는지 확인하고 실패 케이스를 정리합니다.
-4. transport UI를 추가해 CLI 없이도 play, pause, stop, seek를 사용할 수 있게 합니다.
-5. 최소 timeline UI를 추가해 track과 region을 눈으로 확인하고 편집할 수 있게 합니다.
-6. region move, split, resize가 실제 재생과 export에 반영되도록 QA를 고정합니다.
-7. IndexedDB 기반 프로젝트 저장/복원을 추가합니다.
-8. 다중 파일 업로드와 asset 관리 UI를 추가합니다.
+1. 실제 오디오 파일 기준으로 업로드, 재생, seek, stop을 수동 QA합니다.
+2. `session.export`가 실제 WAV를 생성하는지 확인하고 실패 케이스를 정리합니다.
+3. transport UI를 추가해 CLI 없이도 play, pause, stop, seek를 사용할 수 있게 합니다.
+4. 최소 timeline UI를 추가해 track과 region을 눈으로 확인하고 편집할 수 있게 합니다.
+5. region move, split, resize가 실제 재생과 export에 반영되도록 QA를 고정합니다.
+6. IndexedDB 기반 프로젝트 저장/복원을 추가합니다.
+7. 다중 파일 업로드와 asset 관리 UI를 추가합니다.
 
 ## 이후 확장
 

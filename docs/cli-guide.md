@@ -92,10 +92,8 @@ export mix.wav
 
 ## 현재 한계
 
-- 기본 Web composition은 아직 `FakeAudioEngine`을 사용한다.
-- 따라서 현재 기본 실행 경로에서는 실제 소리가 나지 않는다.
-- 현재 기본 실행 경로의 export 파일은 빈 `audio/wav` Blob이다.
-- `ToneAudioEngine` 구현과 테스트는 존재하지만 기본 Web composition에 연결되어야 한다.
+- 기본 Web composition은 `ToneAudioEngine`을 사용한다.
+- 업로드한 오디오 파일의 실제 재생과 WAV export는 브라우저에서 수동 QA가 필요하다.
 - 프로젝트 저장/복원 command는 아직 없다.
 
 ## 확인 명령

@@ -30,9 +30,8 @@
 
 ## 현재 우선순위
 
-1. `ToneAudioEngine`을 기본 Web composition에 연결한다.
-2. 업로드한 오디오 파일이 실제로 재생되는지 확인한다.
-3. play, pause, stop, seek를 CLI와 UI에서 같은 command로 실행한다.
-4. export한 WAV가 실제 오디오를 담는지 확인한다.
-5. 최소 transport UI와 timeline/region 표시를 추가한다.
-6. IndexedDB 기반 프로젝트 저장/복원을 추가한다.
+1. 업로드한 오디오 파일이 실제로 재생되는지 확인한다.
+2. play, pause, stop, seek를 CLI와 UI에서 같은 command로 실행한다.
+3. export한 WAV가 실제 오디오를 담는지 확인한다.
+4. 최소 transport UI와 timeline/region 표시를 추가한다.
+5. IndexedDB 기반 프로젝트 저장/복원을 추가한다.

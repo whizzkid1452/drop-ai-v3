@@ -89,12 +89,11 @@ controller 코드는 Tone.js, 브라우저 저장소, UI framework에 직접 의
 - CLI 편집 명령
 - export 명령과 다운로드 트리거
 - `ToneAudioEngine` 구현과 테스트
+- 기본 Web composition의 `ToneAudioEngine` 연결
 
 아직 제품 기준으로 부족한 부분:
 
-- 기본 Web composition은 아직 `FakeAudioEngine`을 사용한다.
-- 기본 실행 경로의 export 파일은 빈 `audio/wav` Blob이다.
-- 실제 오디오 디코딩, 재생, export가 기본 Web 앱에 연결되어야 한다.
+- 업로드한 오디오 파일의 실제 재생과 WAV export는 브라우저에서 수동 QA가 필요하다.
 - timeline/waveform 기반의 직접 편집 UI는 아직 없다.
 - 프로젝트 저장/복원은 아직 없다.
 
@@ -104,12 +103,11 @@ Drop AI v3는 작고 신뢰할 수 있는 browser DAW로 성장해야 한다.
 
 자연스러운 다음 단계는 다음과 같다.
 
-1. `ToneAudioEngine`을 기본 Web composition에 연결한다.
-2. 실제 오디오 파일 기준으로 업로드, 재생, seek, stop을 수동 QA한다.
-3. `session.export`가 실제 WAV를 생성하는지 확인한다.
-4. transport UI를 추가한다.
-5. 최소 timeline UI를 추가한다.
-6. IndexedDB 기반 프로젝트 저장/복원을 추가한다.
+1. 실제 오디오 파일 기준으로 업로드, 재생, seek, stop을 수동 QA한다.
+2. `session.export`가 실제 WAV를 생성하는지 확인한다.
+3. transport UI를 추가한다.
+4. 최소 timeline UI를 추가한다.
+5. IndexedDB 기반 프로젝트 저장/복원을 추가한다.
 
 프로젝트 정체성은 이 문장에 계속 가까워야 한다.
 
