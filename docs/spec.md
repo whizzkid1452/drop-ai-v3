@@ -3,15 +3,17 @@
 ## 우선순위 기준
 
 - 각 단계는 사용자가 끝낼 수 있는 작업 단위로 나눈다.
-- 먼저 "오디오 파일을 올리고, 편집하고, 들어보고, WAV로 받는 흐름"을 MVP로 만든다.
+- 먼저 "오디오 파일을 올리고, 필요한 구간을 지정하고, 들어보고, 구간 WAV를 받는 흐름"을 MVP로 만든다.
 - 그다음에는 작업물을 잃지 않는 기능, 편집 속도를 높이는 기능, 더 복잡한 제작 기능 순서로 확장한다.
 - 내부 구조 기준이 아니라 사용자 가치 기준으로 phase를 나눈다.
-- 모든 쓰기 기능은 UI, CLI, shortcut, script가 같은 command 실행 경계를 공유하도록 만든다.
+- 기능 구현 순서는 `TDD 테스트 작성 -> command/domain 로직 구현 -> CLI로 동작 검증 -> UI 연결`을 기본으로 한다.
+- 초기 phase에서는 UI와 CLI가 같은 command 실행 경계를 공유하게 만든다.
+- shortcut, agent, script, remote controller는 core workflow가 안정된 뒤 확장 phase에서 붙인다.
 - 한 phase는 PR 단위가 아니다. 한 phase 안에서도 기능은 사용자 가치와 리스크에 따라 여러 PR로 쪼갠다.
 
-## Phase 0. MVP: 오디오 파일 하나를 잘라 WAV로 내보내기
+## Phase 0. MVP: 필요한 구간만 WAV로 내보내기
 
-사용자는 오디오 파일 하나를 올리고, 필요한 구간을 편집하고, 재생으로 확인한 뒤 WAV 파일로 받을 수 있다.
+사용자는 오디오 파일 하나를 올리고, 필요한 구간을 지정하고, 재생으로 확인한 뒤 해당 구간만 WAV 파일로 받을 수 있다.
 
 - 오디오 파일 업로드
 - asset 등록
@@ -19,18 +21,21 @@
 - asset-backed region 생성
 - waveform timeline 표시
 - region 선택
-- region 이동
-- region 분할
-- region 앞부분 trim
-- region 뒷부분 trim
-- region 삭제
+- export 구간 시작점 설정
+- export 구간 끝점 설정
+- export 구간 선택
+- export 구간 길이 표시
 - 재생
 - 일시정지
 - 정지
 - seek
 - playhead 표시
 - 현재 재생 위치 표시
-- WAV export
+- export 구간 preview 재생
+- 구간 WAV export
+- export 구간 시작점 fade in
+- export 구간 끝점 fade out
+- fade 적용된 export 파일 생성
 - export 파일 다운로드
 
 ## Phase 1. 작업물을 잃지 않는 편집기
@@ -70,7 +75,6 @@
 - zoom out
 - zoom to selection
 - timeline scroll
-- keyboard shortcut
 - region duplicate
 - multi-duplicate region
 - region align by start
@@ -249,8 +253,12 @@
 
 ## Phase 10. 확장 워크플로우
 
-사용자는 외부 도구, script, remote controller, headless 실행으로 같은 프로젝트를 조작할 수 있다.
+사용자는 shortcut, agent, script, remote controller, headless 실행으로 같은 프로젝트를 조작할 수 있다.
 
+여기서 script는 별도 AI agent가 아니라, 여러 command를 저장된 절차로 묶어 반복 실행하는 자동화 기능이다. 예를 들어 "선택 구간을 export하고 파일 이름 규칙을 적용한다" 같은 반복 작업을 사용자가 저장해두고 다시 실행하는 기능을 뜻한다.
+
+- keyboard shortcut
+- agent command workflow
 - script manager
 - script execution
 - command macro recording
