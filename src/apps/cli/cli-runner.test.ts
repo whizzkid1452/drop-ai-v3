@@ -62,6 +62,64 @@ describe('runCli', () => {
     }
   });
 
+  it('"export range" exports the configured range', async () => {
+    const app = setup();
+    await runCli('track add', { appController: app.controller });
+    await runCli('region add track-1 asset-1 0', {
+      appController: app.controller,
+    });
+    await runCli('export end 3', { appController: app.controller });
+    await runCli('export start 1', { appController: app.controller });
+
+    const result = await runCli('export range clip.wav', {
+      appController: app.controller,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok && !('kind' in result)) {
+      expect(result.command.type).toBe('session.exportRange.export');
+      expect(result.data).toMatchObject({ filename: 'clip.wav' });
+    }
+  });
+
+  it('"asset upload" requests a file and registers it through the app controller', async () => {
+    const app = setup();
+    const file = new File(['audio'], 'clip.wav', { type: 'audio/wav' });
+
+    const result = await runCli('asset upload', {
+      appController: app.controller,
+      requestUploadFile: async () => ({ ok: true, file }),
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok && !('kind' in result)) {
+      expect(result.command).toEqual({
+        type: 'asset.register',
+        payload: { file },
+      });
+      expect(result.data).toEqual({ id: 'asset-1', duration: 4 });
+    }
+  });
+
+  it('"asset upload" reports cancellation without mutating the session', async () => {
+    const app = setup();
+
+    const result = await runCli('asset upload', {
+      appController: app.controller,
+      requestUploadFile: async () => ({
+        ok: false,
+        message: 'Upload canceled.',
+      }),
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      kind: 'local',
+      output: 'Upload canceled.',
+    });
+    expect(app.sessionReader.getState().trackOrder).toEqual([]);
+  });
+
   it('handles help and commands without changing the session', async () => {
     const app = setup();
 

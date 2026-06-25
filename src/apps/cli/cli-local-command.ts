@@ -35,6 +35,10 @@ export function runLocalCommand(
     case 'status':
       return local(formatStatus(deps));
 
+    case 'asset upload':
+    case 'asset register':
+      return local('File upload requires a browser file picker.');
+
     default:
       return undefined;
   }
@@ -63,6 +67,7 @@ function formatHelp(uploadInfo?: CliUploadInfo): string {
     '',
     'Typical flow:',
     '  track add',
+    '  asset upload',
     '  region add <trackId> <assetId> 0',
     '  region split <trackId> <regionId> <seconds>',
     '  session export mix.wav',
