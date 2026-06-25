@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
-  cliCommandRegistry,
+  cliCommandCatalog,
   formatCliCommandList,
   parseRegisteredCliCommand,
 } from './command-registry';
 
 describe('cliCommandRegistry', () => {
-  it('keeps command usages unique', () => {
-    const usages = cliCommandRegistry.map((definition) => definition.usage);
+  it('keeps command catalog usages unique', () => {
+    const usages = cliCommandCatalog.map((definition) => definition.usage);
 
     expect(new Set(usages).size).toBe(usages.length);
   });
@@ -15,6 +15,10 @@ describe('cliCommandRegistry', () => {
   it('formats the command list from registered definitions', () => {
     const commandList = formatCliCommandList();
 
+    expect(commandList).toContain('Local:');
+    expect(commandList).toContain(
+      '  asset upload - Open a file picker and register the selected audio asset.'
+    );
     expect(commandList).toContain('Playback:');
     expect(commandList).toContain(
       '  region split <trackId> <regionId> <splitTime> - Split a region at a time.'

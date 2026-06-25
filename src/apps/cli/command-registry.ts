@@ -10,22 +10,62 @@ export type CliParseResult =
       error: string;
     };
 
-export type CliCommandGroup = 'Playback' | 'Track' | 'Region' | 'Session';
+export type CliCommandGroup =
+  | 'Local'
+  | 'Playback'
+  | 'Track'
+  | 'Region'
+  | 'Session';
 
-export interface CliCommandDefinition {
+export type CliDomainCommandGroup = Exclude<CliCommandGroup, 'Local'>;
+
+export interface CliCommandMetadata {
   description: string;
   group: CliCommandGroup;
-  matches: (tokens: string[]) => boolean;
-  parse: (tokens: string[]) => CliParseResult;
   usage: string;
 }
 
-const CLI_COMMAND_GROUPS: CliCommandGroup[] = [
+export interface CliLocalCommandDefinition extends CliCommandMetadata {
+  commandInput: string;
+  group: 'Local';
+}
+
+export interface CliCommandDefinition extends CliCommandMetadata {
+  group: CliDomainCommandGroup;
+  matches: (tokens: string[]) => boolean;
+  parse: (tokens: string[]) => CliParseResult;
+}
+
+export const CLI_COMMAND_GROUPS: readonly CliCommandGroup[] = [
+  'Local',
   'Playback',
   'Track',
   'Region',
   'Session',
 ];
+
+export const cliLocalCommandRegistry = [
+  localCommand({
+    usage: 'help',
+    description: 'Show CLI usage guidance.',
+  }),
+  localCommand({
+    usage: 'commands',
+    description: 'List available CLI commands.',
+  }),
+  localCommand({
+    usage: 'status',
+    description: 'Show the current session summary.',
+  }),
+  localCommand({
+    usage: 'asset upload',
+    description: 'Open a file picker and register the selected audio asset.',
+  }),
+  localCommand({
+    usage: 'asset register',
+    description: 'Alias for asset upload.',
+  }),
+] as const satisfies readonly CliLocalCommandDefinition[];
 
 export const cliCommandRegistry = [
   command({
@@ -223,6 +263,11 @@ export const cliCommandRegistry = [
   }),
 ] as const satisfies readonly CliCommandDefinition[];
 
+export const cliCommandCatalog = [
+  ...cliLocalCommandRegistry,
+  ...cliCommandRegistry,
+] as const satisfies readonly CliCommandMetadata[];
+
 export type CliCommandUsage = (typeof cliCommandRegistry)[number]['usage'];
 
 export function parseRegisteredCliCommand(tokens: string[]): CliParseResult {
@@ -239,7 +284,7 @@ export function parseRegisteredCliCommand(tokens: string[]): CliParseResult {
 
 export function formatCliCommandList(): string {
   return CLI_COMMAND_GROUPS.flatMap((group) => {
-    const definitions = cliCommandRegistry.filter(
+    const definitions = cliCommandCatalog.filter(
       (definition) => definition.group === group
     );
 
@@ -255,7 +300,7 @@ function command<TUsage extends string>({
   parse,
   prefix,
   usage,
-}: Omit<CliCommandDefinition, 'matches'> & {
+}: Omit<CliCommandDefinition, 'matches' | 'usage'> & {
   prefix: string[];
   usage: TUsage;
 }): CliCommandDefinition & { usage: TUsage } {
@@ -268,11 +313,29 @@ function command<TUsage extends string>({
   };
 }
 
+function localCommand<TUsage extends string>({
+  description,
+  usage,
+}: {
+  description: string;
+  usage: TUsage;
+}): CliLocalCommandDefinition & {
+  commandInput: TUsage;
+  usage: TUsage;
+} {
+  return {
+    commandInput: usage,
+    description,
+    group: 'Local',
+    usage,
+  };
+}
+
 function hasPrefix(tokens: string[], prefix: string[]): boolean {
   return prefix.every((token, index) => tokens[index] === token);
 }
 
-function formatCommandDefinition(definition: CliCommandDefinition): string {
+function formatCommandDefinition(definition: CliCommandMetadata): string {
   return `  ${definition.usage} - ${definition.description}`;
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { runCli } from '@/apps/cli/cli-runner';
-import { cliCommandRegistry } from '@/apps/cli/command-registry';
+import { cliCommandCatalog } from '@/apps/cli/command-registry';
 import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
 import { createApp } from '@/composition/create-app';
 import { uploadFileToSession } from '../upload/upload-session-flow';
@@ -9,24 +9,16 @@ import {
   groupCliCommandButtons,
 } from './cli-command-buttons';
 
-const LOCAL_COMMAND_COUNT = 4;
-
 describe('createCliCommandButtons', () => {
   it('creates one button command for every local and registered CLI command', () => {
     const uploadInfo = createUploadInfo();
 
     const buttons = createCliCommandButtons(uploadInfo);
 
-    expect(buttons).toHaveLength(
-      LOCAL_COMMAND_COUNT + cliCommandRegistry.length
+    expect(buttons).toHaveLength(cliCommandCatalog.length);
+    expect(buttons.map((button) => button.usage)).toEqual(
+      cliCommandCatalog.map((definition) => definition.usage)
     );
-    expect(buttons.map((button) => button.usage)).toEqual([
-      'help',
-      'commands',
-      'status',
-      'asset upload',
-      ...cliCommandRegistry.map((definition) => definition.usage),
-    ]);
   });
 
   it('maps uploaded ids into commands that require session entity ids', () => {

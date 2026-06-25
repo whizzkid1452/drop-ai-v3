@@ -1,11 +1,13 @@
 import {
+  CLI_COMMAND_GROUPS,
   cliCommandRegistry,
+  cliLocalCommandRegistry,
   type CliCommandGroup,
   type CliCommandUsage,
 } from '@/apps/cli/command-registry';
 import type { UploadedSessionInfo } from '../upload/upload-session-flow';
 
-export type CliCommandButtonGroup = CliCommandGroup | 'Local';
+export type CliCommandButtonGroup = CliCommandGroup;
 
 export interface CliCommandButtonDefinition {
   commandInput: string;
@@ -13,18 +15,6 @@ export interface CliCommandButtonDefinition {
   label: string;
   usage: string;
 }
-
-interface LocalCommandButtonDefinition {
-  commandInput: string;
-  label: string;
-}
-
-const LOCAL_COMMANDS: readonly LocalCommandButtonDefinition[] = [
-  { commandInput: 'help', label: 'help' },
-  { commandInput: 'commands', label: 'commands' },
-  { commandInput: 'status', label: 'status' },
-  { commandInput: 'asset upload', label: 'asset upload' },
-];
 
 const commandInputByUsage: Record<
   CliCommandUsage,
@@ -70,23 +60,15 @@ const commandInputByUsage: Record<
     `export ${createExportFilename(uploadInfo.filename)}`,
 };
 
-const COMMAND_GROUPS: readonly CliCommandButtonGroup[] = [
-  'Local',
-  'Playback',
-  'Track',
-  'Region',
-  'Session',
-];
-
 export function createCliCommandButtons(
   uploadInfo: UploadedSessionInfo
 ): CliCommandButtonDefinition[] {
   return [
-    ...LOCAL_COMMANDS.map((command) => ({
-      commandInput: command.commandInput,
-      group: 'Local' as const,
-      label: command.label,
-      usage: command.commandInput,
+    ...cliLocalCommandRegistry.map((definition) => ({
+      commandInput: definition.commandInput,
+      group: definition.group,
+      label: definition.commandInput,
+      usage: definition.usage,
     })),
     ...cliCommandRegistry.map((definition) => {
       const commandInput = commandInputByUsage[definition.usage](uploadInfo);
@@ -107,7 +89,7 @@ export function groupCliCommandButtons(
   commands: CliCommandButtonDefinition[];
   group: CliCommandButtonGroup;
 }> {
-  return COMMAND_GROUPS.map((group) => ({
+  return CLI_COMMAND_GROUPS.map((group) => ({
     commands: buttons.filter((button) => button.group === group),
     group,
   })).filter((buttonGroup) => buttonGroup.commands.length > 0);
