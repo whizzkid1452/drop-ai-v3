@@ -44,6 +44,12 @@ export interface CommandDataByType {
   'region.remove': undefined;
   'asset.register': AssetRegisterResult;
   'session.export': SessionExportResult;
+  'session.exportRange.start.set': undefined;
+  'session.exportRange.end.set': undefined;
+  'session.exportRange.fadeIn.set': undefined;
+  'session.exportRange.fadeOut.set': undefined;
+  'session.exportRange.preview.play': undefined;
+  'session.exportRange.export': SessionExportResult;
 }
 
 export type CommandDataFor<TCommand extends AppCommand> =

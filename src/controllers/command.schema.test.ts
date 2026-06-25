@@ -136,6 +136,56 @@ describe('commandSchema', () => {
     ).toBe(false);
   });
 
+  it('validates export range commands', () => {
+    expect(
+      commandSchema.safeParse({
+        type: 'session.exportRange.start.set',
+        payload: { seconds: 1.5 },
+      }).success
+    ).toBe(true);
+    expect(
+      commandSchema.safeParse({
+        type: 'session.exportRange.end.set',
+        payload: { seconds: 4 },
+      }).success
+    ).toBe(true);
+    expect(
+      commandSchema.safeParse({
+        type: 'session.exportRange.fadeIn.set',
+        payload: { seconds: 0.25 },
+      }).success
+    ).toBe(true);
+    expect(
+      commandSchema.safeParse({
+        type: 'session.exportRange.fadeOut.set',
+        payload: { seconds: 0.25 },
+      }).success
+    ).toBe(true);
+    expect(
+      commandSchema.safeParse({
+        type: 'session.exportRange.preview.play',
+      }).success
+    ).toBe(true);
+    expect(
+      commandSchema.safeParse({
+        type: 'session.exportRange.export',
+        payload: { filename: 'clip.wav' },
+      }).success
+    ).toBe(true);
+    expect(
+      commandSchema.safeParse({
+        type: 'session.exportRange.start.set',
+        payload: { seconds: -1 },
+      }).success
+    ).toBe(false);
+    expect(
+      commandSchema.safeParse({
+        type: 'session.exportRange.export',
+        payload: { filename: '' },
+      }).success
+    ).toBe(false);
+  });
+
   it('rejects extra fields before a command can execute', () => {
     expect(
       commandSchema.safeParse({

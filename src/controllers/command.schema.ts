@@ -230,6 +230,68 @@ const sessionExportCommandSchema = z
   })
   .strict();
 
+const exportRangeStartCommandSchema = z
+  .object({
+    type: z.literal('session.exportRange.start.set'),
+    payload: z
+      .object({
+        seconds: secondsSchema,
+      })
+      .strict(),
+  })
+  .strict();
+
+const exportRangeEndCommandSchema = z
+  .object({
+    type: z.literal('session.exportRange.end.set'),
+    payload: z
+      .object({
+        seconds: secondsSchema,
+      })
+      .strict(),
+  })
+  .strict();
+
+const exportRangeFadeInCommandSchema = z
+  .object({
+    type: z.literal('session.exportRange.fadeIn.set'),
+    payload: z
+      .object({
+        seconds: secondsSchema,
+      })
+      .strict(),
+  })
+  .strict();
+
+const exportRangeFadeOutCommandSchema = z
+  .object({
+    type: z.literal('session.exportRange.fadeOut.set'),
+    payload: z
+      .object({
+        seconds: secondsSchema,
+      })
+      .strict(),
+  })
+  .strict();
+
+const exportRangePreviewCommandSchema = z
+  .object({
+    type: z.literal('session.exportRange.preview.play'),
+  })
+  .strict();
+
+const exportRangeExportCommandSchema = z
+  .object({
+    type: z.literal('session.exportRange.export'),
+    payload: z
+      .object({
+        filename: z.string().min(1).optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
 export const commandSchema = z.discriminatedUnion('type', [
   playbackPlayCommandSchema,
   playbackPauseCommandSchema,
@@ -251,6 +313,12 @@ export const commandSchema = z.discriminatedUnion('type', [
   regionRemoveCommandSchema,
   assetRegisterCommandSchema,
   sessionExportCommandSchema,
+  exportRangeStartCommandSchema,
+  exportRangeEndCommandSchema,
+  exportRangeFadeInCommandSchema,
+  exportRangeFadeOutCommandSchema,
+  exportRangePreviewCommandSchema,
+  exportRangeExportCommandSchema,
 ]);
 
 export type AppCommand = z.infer<typeof commandSchema>;
