@@ -3,46 +3,55 @@
 ## 우선순위 기준
 
 - 각 단계는 사용자가 끝낼 수 있는 작업 단위로 나눈다.
-- 먼저 "오디오 파일을 올리고, 필요한 구간을 지정하고, 들어보고, 구간 WAV를 받는 흐름"을 MVP로 만든다.
-- 그다음에는 MVP command 경계를 AI agent, 웹 UI, 단축키로 차례로 노출한 뒤, 작업물을 잃지 않는 기능, 편집 속도를 높이는 기능, 더 복잡한 제작 기능 순서로 확장한다.
+- 먼저 CLI에서 command 실행 경계를 검증한다.
+- 그다음 AI agent를 붙여 "오디오 파일을 올리고, 필요한 구간을 지정하고, 들어보고, 구간 WAV를 받는 흐름"을 MVP로 만든다.
+- MVP 이후에는 같은 command 경계를 웹 UI, 단축키로 차례로 노출한 뒤, 작업물을 잃지 않는 기능, 편집 속도를 높이는 기능, 더 복잡한 제작 기능 순서로 확장한다.
 - 내부 구조 기준이 아니라 사용자 가치 기준으로 phase를 나눈다.
 - 기능 구현 순서는 `TDD 테스트 작성 -> command/domain 로직 구현 -> CLI로 동작 검증 -> UI 연결`을 기본으로 한다.
 - 초기 phase에서는 AI agent, 웹 UI, 단축키, CLI가 같은 command 실행 경계를 공유하게 만든다.
 - script, remote controller는 core workflow와 기본 조작 surface가 안정된 뒤 확장 phase에서 붙인다.
 - 한 phase는 PR 단위가 아니다. 한 phase 안에서도 기능은 사용자 가치와 리스크에 따라 여러 PR로 쪼갠다.
+- MVP 완료 기준은 Phase 1 종료 시점이다. Phase 0은 MVP가 아니라 AI agent가 사용할 command 실행 경계를 준비하는 단계다.
 
-## Phase 0. MVP: 필요한 구간만 WAV로 내보내기
+## Phase 0. CLI command 기반 구축
 
-사용자는 오디오 파일 하나를 올리고, 필요한 구간을 지정하고, 재생으로 확인한 뒤 해당 구간만 WAV 파일로 받을 수 있다.
+AI agent를 붙이기 전에 CLI에서 command 실행 경계를 검증한다. 여기서 CLI는 문자열 입력을 command로 parse하고 `AppController.executeCommand()`로 실행하는 조작 surface를 뜻한다.
 
-- 오디오 파일 업로드
-- asset 등록
-- 기본 track 생성
-- asset-backed region 생성
-- waveform timeline 표시
-- region 선택
-- export 구간 시작점 설정
-- export 구간 끝점 설정
-- export 구간 선택
-- export 구간 길이 표시
-- 재생
-- 일시정지
-- 정지
-- seek
-- playhead 표시
-- 현재 재생 위치 표시
-- export 구간 preview 재생
-- 구간 WAV export
-- export 구간 시작점 fade in
-- export 구간 끝점 fade out
-- fade 적용된 export 파일 생성
-- export 파일 다운로드
+이 phase는 MVP 완료가 아니다. Phase 1의 AI agent가 재사용할 command registry, session read model, 실행 결과 형식을 먼저 고정하는 선행 단계다.
 
-## Phase 1. AI agent 붙이기
+체크 기준: 현재 CLI 입력으로 실행 가능한 항목만 체크한다. controller/domain에만 존재하거나 웹 UI를 거쳐야 하는 항목은 체크하지 않는다.
+
+- [ ] CLI 오디오 파일 업로드
+- [ ] CLI asset 등록
+  - `asset.register` controller command는 있으나, 현재 CLI parser에 파일 업로드 입력은 없다.
+- [x] CLI 기본 track 생성
+- [x] CLI asset-backed region 생성
+- [x] CLI region move
+- [x] CLI region split
+- [x] CLI region resize
+- [x] CLI 재생
+- [x] CLI 일시정지
+- [x] CLI 정지
+- [x] CLI seek
+- [ ] CLI export 구간 시작점 설정
+- [ ] CLI export 구간 끝점 설정
+- [ ] CLI export 구간 preview 재생
+- [ ] CLI 구간 WAV export
+  - 현재 확인된 export는 선택 구간이 아니라 session 전체 duration 기준 WAV export다.
+- [ ] CLI export 구간 시작점 fade in 설정
+- [ ] CLI export 구간 끝점 fade out 설정
+- [ ] fade 적용 offline render
+- [x] CLI session 전체 WAV export
+
+## Phase 1. MVP: AI agent 붙이기
 
 사용자는 자연어 요청을 command 실행 계획으로 바꾸고, 승인한 command만 현재 session에 적용할 수 있다.
 
 여기서 AI agent는 별도 상태 소유자가 아니라, command registry와 session read model을 사용하는 자연어 기반 조작 surface를 뜻한다.
+
+Phase 1 종료 시점을 MVP 완료 기준으로 본다. 이때 MVP는 "사용자가 AI agent를 통해 현재 session을 이해하고, command plan을 승인한 뒤, 승인된 command로 오디오 편집과 WAV export를 수행할 수 있는 상태"를 뜻한다.
+
+Phase 1은 Phase 0의 CLI command와 같은 command registry를 사용한다. 화면 조작 UI는 Phase 2에서 붙인다.
 
 - agent command workflow
 - agent가 사용할 command registry 노출
@@ -62,20 +71,29 @@
 
 여기서 웹 UI는 새 편집 상태 소유자가 아니라, 같은 command 실행 경계와 session read model을 사용하는 브라우저 control surface를 뜻한다.
 
-- upload screen
-- file picker/dropzone
-- upload validation error UI
-- command-backed session creation UI
-- session summary panel
-- waveform timeline UI
-- region selection UI
-- export range control UI
-- transport control UI
-- playhead display UI
-- export preview UI
-- export download UI
-- command result feedback UI
-- command error feedback UI
+UI 관련 항목은 이 phase에 모은다. 표시, 선택, 드래그, range control, 다운로드 시작 같은 브라우저 사용자 조작은 Phase 0 command/domain 항목과 분리한다.
+
+- [x] upload screen
+- [x] file picker/dropzone
+- [x] 오디오 파일 업로드 UI
+- [x] asset 등록 UI 흐름
+- [x] upload validation error UI
+- [x] command-backed session creation UI
+- [x] session summary panel
+- [ ] waveform timeline UI
+- [ ] region selection UI
+- [ ] export range control UI
+- [ ] export range start control UI
+- [ ] export range end control UI
+- [ ] export range length display UI
+- [x] transport control UI
+- [ ] playhead display UI
+  - seek position 표시는 있으나, 재생 중 실시간 playhead UI는 아직 확인되지 않았다.
+- [ ] current playback position display UI
+- [ ] export preview UI
+- [x] export download UI
+- [x] command result feedback UI
+- [x] command error feedback UI
 
 ## Phase 3. 단축키 붙이기
 
