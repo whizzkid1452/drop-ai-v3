@@ -14,7 +14,10 @@ export function getSessionExportResult(
     return undefined;
   }
 
-  if (result.command.type !== 'session.export') {
+  if (
+    result.command.type !== 'session.export' &&
+    result.command.type !== 'session.exportRange.export'
+  ) {
     return undefined;
   }
 

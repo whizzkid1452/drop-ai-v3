@@ -9,7 +9,7 @@ import {
   groupCliCommandButtons,
 } from './cli-command-buttons';
 
-const LOCAL_COMMAND_COUNT = 3;
+const LOCAL_COMMAND_COUNT = 4;
 
 describe('createCliCommandButtons', () => {
   it('creates one button command for every local and registered CLI command', () => {
@@ -24,6 +24,7 @@ describe('createCliCommandButtons', () => {
       'help',
       'commands',
       'status',
+      'asset upload',
       ...cliCommandRegistry.map((definition) => definition.usage),
     ]);
   });
@@ -76,6 +77,10 @@ describe('createCliCommandButtons', () => {
       const result = await runCli(button.commandInput, {
         appController: app.controller,
         getStatusText: () => 'Session: session-1',
+        requestUploadFile: async () => ({
+          ok: true,
+          file: new File(['audio'], 'button.wav', { type: 'audio/wav' }),
+        }),
         uploadInfo,
       });
 

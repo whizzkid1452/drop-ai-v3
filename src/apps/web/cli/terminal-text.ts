@@ -12,6 +12,7 @@ export function formatSessionStatus(session: WebSessionState): string {
     `Regions: ${regionCount}`,
     `Playing: ${session.playback.playing ? 'yes' : 'no'}`,
     `Position: ${session.playback.positionSeconds}s`,
+    `Export range: ${session.exportRange.startSeconds}s -> ${session.exportRange.endSeconds}s`,
   ].join('\n');
 }
 

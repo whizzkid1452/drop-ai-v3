@@ -13,6 +13,12 @@ describe('terminal text', () => {
         playing: true,
         positionSeconds: 1.5,
       },
+      exportRange: {
+        endSeconds: 4,
+        fadeInSeconds: 0,
+        fadeOutSeconds: 0,
+        startSeconds: 0,
+      },
       trackOrder: ['track-1'],
       tracksById: {
         'track-1': {
@@ -35,6 +41,7 @@ describe('terminal text', () => {
         'Regions: 2',
         'Playing: yes',
         'Position: 1.5s',
+        'Export range: 0s -> 4s',
       ].join('\n')
     );
   });

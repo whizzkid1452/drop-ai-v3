@@ -23,6 +23,7 @@ const LOCAL_COMMANDS: readonly LocalCommandButtonDefinition[] = [
   { commandInput: 'help', label: 'help' },
   { commandInput: 'commands', label: 'commands' },
   { commandInput: 'status', label: 'status' },
+  { commandInput: 'asset upload', label: 'asset upload' },
 ];
 
 const commandInputByUsage: Record<
@@ -57,6 +58,14 @@ const commandInputByUsage: Record<
     `region remove ${uploadInfo.trackId} ${uploadInfo.regionId}`,
   'session export [filename]': (uploadInfo) =>
     `session export ${createExportFilename(uploadInfo.filename)}`,
+  'export start <seconds>': () => 'export start 0',
+  'export end <seconds>': (uploadInfo) =>
+    `export end ${formatPositiveTime(uploadInfo.duration)}`,
+  'export fade-in <seconds>': () => 'export fade-in 0.1',
+  'export fade-out <seconds>': () => 'export fade-out 0.1',
+  'export preview': () => 'export preview',
+  'export range [filename]': (uploadInfo) =>
+    `export range ${createRangeExportFilename(uploadInfo.filename)}`,
   'export [filename]': (uploadInfo) =>
     `export ${createExportFilename(uploadInfo.filename)}`,
 };
@@ -107,6 +116,11 @@ export function groupCliCommandButtons(
 function createExportFilename(filename: string): string {
   const basename = filename.replace(/\.[^.]*$/, '');
   return `${basename || 'session'}.wav`;
+}
+
+function createRangeExportFilename(filename: string): string {
+  const basename = filename.replace(/\.[^.]*$/, '');
+  return `${basename || 'session'}-range.wav`;
 }
 
 function formatInsideRegionTime(duration: number): string {

@@ -59,4 +59,20 @@ describe('formatCommandResult', () => {
       })
     ).toBe('OK: session.export filename=mix.wav size=3 bytes');
   });
+
+  it('formats range export results without serializing the blob', () => {
+    expect(
+      formatCommandResult({
+        ok: true,
+        command: {
+          type: 'session.exportRange.export',
+          payload: { filename: 'clip.wav' },
+        },
+        data: {
+          blob: new Blob(['wav'], { type: 'audio/wav' }),
+          filename: 'clip.wav',
+        },
+      })
+    ).toBe('OK: session.exportRange.export filename=clip.wav size=3 bytes');
+  });
 });

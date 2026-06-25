@@ -10,7 +10,10 @@ export function formatCommandResult(result: CliRunResult): string {
     return `Error: ${result.error.message}`;
   }
 
-  if (result.command.type === 'session.export') {
+  if (
+    result.command.type === 'session.export' ||
+    result.command.type === 'session.exportRange.export'
+  ) {
     return formatSessionExportResult(result);
   }
 
@@ -36,5 +39,9 @@ function formatSessionExportResult(result: CliRunResult): string {
     return 'OK: session.export';
   }
 
-  return `OK: session.export filename=${exportResult.filename} size=${exportResult.blob.size} bytes`;
+  if ('kind' in result || !result.ok) {
+    return 'OK: session.export';
+  }
+
+  return `OK: ${result.command.type} filename=${exportResult.filename} size=${exportResult.blob.size} bytes`;
 }

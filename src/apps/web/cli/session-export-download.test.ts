@@ -20,6 +20,21 @@ describe('getSessionExportResult', () => {
     ).toEqual({ blob, filename: 'mix.wav' });
   });
 
+  it('returns session export data from a successful range export command', () => {
+    const blob = new Blob(['wav'], { type: 'audio/wav' });
+
+    expect(
+      getSessionExportResult({
+        ok: true,
+        command: {
+          type: 'session.exportRange.export',
+          payload: { filename: 'clip.wav' },
+        },
+        data: { blob, filename: 'clip.wav' },
+      })
+    ).toEqual({ blob, filename: 'clip.wav' });
+  });
+
   it('ignores local command results', () => {
     expect(
       getSessionExportResult({
