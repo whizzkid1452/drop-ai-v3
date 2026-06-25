@@ -54,6 +54,46 @@ describe('FakeAudioEngine', () => {
     await expect(provider.getAssetDuration('asset-1')).resolves.toBe(4.5);
   });
 
+  it('records range export calls with range options', async () => {
+    const recorder = createCallRecorder();
+    const provider = new FakeAudioEngine({ recorder });
+
+    const blob = await provider.exportSessionRange({
+      durationSeconds: 2,
+      endSeconds: 3,
+      fadeInSeconds: 0.25,
+      fadeOutSeconds: 0.5,
+      session: {
+        exportRange: {
+          endSeconds: 3,
+          fadeInSeconds: 0.25,
+          fadeOutSeconds: 0.5,
+          startSeconds: 1,
+        },
+        id: 'session-1',
+        playback: {
+          bpm: 120,
+          loop: { enabled: false, end: 4, start: 0 },
+          masterVolume: 1,
+          playing: false,
+          positionSeconds: 0,
+        },
+        trackOrder: [],
+        tracksById: {},
+      },
+      startSeconds: 1,
+    });
+
+    expect(blob).toBeInstanceOf(Blob);
+    expect(recorder.getCalls('exportSessionRange')[0].args[0]).toMatchObject({
+      durationSeconds: 2,
+      endSeconds: 3,
+      fadeInSeconds: 0.25,
+      fadeOutSeconds: 0.5,
+      startSeconds: 1,
+    });
+  });
+
   it('records track mixer calls with arguments', () => {
     const recorder = createCallRecorder();
     const provider = new FakeAudioEngine({ recorder });

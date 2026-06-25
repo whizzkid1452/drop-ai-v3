@@ -25,6 +25,15 @@ export interface ImportFileAssetResult {
   duration: number;
 }
 
+export interface ExportSessionRangeInput {
+  durationSeconds: number;
+  endSeconds: number;
+  fadeInSeconds: number;
+  fadeOutSeconds: number;
+  session: SessionState;
+  startSeconds: number;
+}
+
 export interface LoopRange {
   start: number;
   end: number;
@@ -56,4 +65,5 @@ export interface IAudioEngine {
   getAssetDuration(assetId: string): Promise<number>;
   importFileAsset(assetId: string, file: File): Promise<ImportFileAssetResult>;
   exportSession(durationSeconds: number, session: SessionState): Promise<Blob>;
+  exportSessionRange(input: ExportSessionRangeInput): Promise<Blob>;
 }

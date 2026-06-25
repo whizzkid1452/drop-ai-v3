@@ -2,6 +2,7 @@ import type { CallRecorder } from '@/testing/call-recorder';
 import type { SessionState } from '@/session/session-state';
 import type {
   AddAudioRegionInput,
+  ExportSessionRangeInput,
   IAudioEngine,
   ImportFileAssetResult,
   LoopRange,
@@ -118,6 +119,11 @@ export class FakeAudioEngine implements IAudioEngine {
     session: SessionState
   ): Promise<Blob> {
     this.record('exportSession', [durationSeconds, session.id]);
+    return new Blob([], { type: 'audio/wav' });
+  }
+
+  async exportSessionRange(input: ExportSessionRangeInput): Promise<Blob> {
+    this.record('exportSessionRange', [input]);
     return new Blob([], { type: 'audio/wav' });
   }
 }

@@ -10,11 +10,13 @@ import {
 import type { SessionState } from '@/session/session-state';
 import type {
   AddAudioRegionInput,
+  ExportSessionRangeInput,
   IAudioEngine,
   LoopRange,
   MoveAudioRegionInput,
   ResizeAudioRegionInput,
 } from '../audio-engine';
+import { applyOutputFade } from '../output-fade';
 import { encodeWav } from '../wav-encoder';
 
 interface TrackNode {
@@ -194,19 +196,52 @@ export class ToneAudioEngine implements IAudioEngine {
     durationSeconds: number,
     session: SessionState
   ): Promise<Blob> {
+    const offlineBuffer = await this.renderOfflineSession({
+      durationSeconds,
+      session,
+    });
+
+    const audioBuffer = offlineBuffer.get();
+    if (!audioBuffer) {
+      throw new Error('Failed to render offline buffer.');
+    }
+    return encodeWav(audioBuffer);
+  }
+
+  async exportSessionRange(input: ExportSessionRangeInput): Promise<Blob> {
+    const offlineBuffer = await this.renderOfflineSession(input);
+    const audioBuffer = offlineBuffer.get();
+    if (!audioBuffer) {
+      throw new Error('Failed to render offline buffer.');
+    }
+
+    applyOutputFade(audioBuffer, {
+      fadeInSeconds: input.fadeInSeconds,
+      fadeOutSeconds: input.fadeOutSeconds,
+    });
+
+    return encodeWav(audioBuffer);
+  }
+
+  private async renderOfflineSession(input: {
+    durationSeconds: number;
+    endSeconds?: number;
+    session: SessionState;
+    startSeconds?: number;
+  }) {
     const buffers = this.buffers;
+    const exportStart = input.startSeconds;
+    const exportEnd = input.endSeconds;
 
-    const offlineBuffer = await Offline(({ transport }) => {
-      transport.bpm.value = session.playback.bpm;
-      getDestination().volume.value = unitToDb(session.playback.masterVolume);
+    return await Offline(({ transport }) => {
+      transport.bpm.value = input.session.playback.bpm;
+      getDestination().volume.value = unitToDb(
+        input.session.playback.masterVolume
+      );
 
-      for (const trackId of session.trackOrder) {
-        const track = session.tracksById[trackId];
-        const channel = new Channel().toDestination();
-        channel.volume.value = unitToDb(track.volume);
-        channel.mute = track.muted;
-        channel.solo = track.soloed;
-        channel.pan.value = track.pan;
+      for (const trackId of input.session.trackOrder) {
+        const track = input.session.tracksById[trackId];
+        const channel = createOfflineChannel(track);
 
         for (const regionId of track.regionOrder) {
           const region = track.regionsById[regionId];
@@ -216,18 +251,65 @@ export class ToneAudioEngine implements IAudioEngine {
               `Asset buffer not registered for export: ${region.assetId}`
             );
           }
+
+          const schedule = getOfflineRegionSchedule({
+            exportEnd,
+            exportStart,
+            region,
+          });
+
+          if (!schedule) {
+            continue;
+          }
+
           const player = new Player(buffer).connect(channel);
-          player.sync().start(region.startTime, region.offset, region.duration);
+          player
+            .sync()
+            .start(schedule.startTime, schedule.offset, schedule.duration);
         }
       }
 
       transport.start();
-    }, durationSeconds);
-
-    const audioBuffer = offlineBuffer.get();
-    if (!audioBuffer) {
-      throw new Error('Failed to render offline buffer.');
-    }
-    return encodeWav(audioBuffer);
+    }, input.durationSeconds);
   }
+}
+
+function createOfflineChannel(track: SessionState['tracksById'][string]) {
+  const channel = new Channel().toDestination();
+  channel.volume.value = unitToDb(track.volume);
+  channel.mute = track.muted;
+  channel.solo = track.soloed;
+  channel.pan.value = track.pan;
+  return channel;
+}
+
+function getOfflineRegionSchedule(input: {
+  exportEnd: number | undefined;
+  exportStart: number | undefined;
+  region: SessionState['tracksById'][string]['regionsById'][string];
+}): { duration: number; offset: number; startTime: number } | undefined {
+  const { exportEnd, exportStart, region } = input;
+
+  if (exportStart === undefined || exportEnd === undefined) {
+    return {
+      duration: region.duration,
+      offset: region.offset,
+      startTime: region.startTime,
+    };
+  }
+
+  const regionEnd = region.startTime + region.duration;
+  const intersectionStart = Math.max(region.startTime, exportStart);
+  const intersectionEnd = Math.min(regionEnd, exportEnd);
+  const duration = intersectionEnd - intersectionStart;
+
+  if (duration <= 0) {
+    return undefined;
+  }
+
+  return {
+    duration,
+    offset: region.offset + (intersectionStart - region.startTime),
+    startTime: intersectionStart - exportStart,
+  };
 }

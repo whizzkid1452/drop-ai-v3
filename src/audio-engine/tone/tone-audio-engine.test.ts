@@ -565,6 +565,12 @@ describe('ToneAudioEngine.exportSession', () => {
         masterVolume: 1,
         loop: { start: 0, end: 4, enabled: false },
       },
+      exportRange: {
+        startSeconds: 0,
+        endSeconds: 4,
+        fadeInSeconds: 0,
+        fadeOutSeconds: 0,
+      },
     };
   }
 
@@ -641,5 +647,47 @@ describe('ToneAudioEngine.exportSession', () => {
     await expect(
       provider.exportSession(1, snapshotForExport())
     ).rejects.toThrow(/asset/i);
+  });
+
+  it('exports a range using export-local player start and clipped buffer offset', async () => {
+    const provider = await makeProviderWithBuffers();
+    const snapshot = snapshotForExport();
+    const region = snapshot.tracksById['track-1'].regionsById['region-1'];
+    region.startTime = 0;
+    region.duration = 4;
+    region.offset = 0.5;
+
+    await provider.exportSessionRange({
+      durationSeconds: 2,
+      endSeconds: 3,
+      fadeInSeconds: 0,
+      fadeOutSeconds: 0,
+      session: snapshot,
+      startSeconds: 1,
+    });
+
+    expect(toneState.offlineCalls).toHaveLength(1);
+    expect(toneState.offlineCalls[0].duration).toBe(2);
+    const player = toneState.offlineCalls[0].playerInstancesAfter[0];
+    expect(player.start).toHaveBeenCalledWith(0, 1.5, 2);
+  });
+
+  it('skips regions that do not intersect the exported range', async () => {
+    const provider = await makeProviderWithBuffers();
+    const snapshot = snapshotForExport();
+    const region = snapshot.tracksById['track-1'].regionsById['region-1'];
+    region.startTime = 8;
+    region.duration = 2;
+
+    await provider.exportSessionRange({
+      durationSeconds: 2,
+      endSeconds: 3,
+      fadeInSeconds: 0,
+      fadeOutSeconds: 0,
+      session: snapshot,
+      startSeconds: 1,
+    });
+
+    expect(toneState.offlineCalls[0].playerInstancesAfter).toHaveLength(0);
   });
 });
