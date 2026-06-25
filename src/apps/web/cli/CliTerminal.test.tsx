@@ -57,6 +57,18 @@ afterEach(() => {
 });
 
 describe('CliTerminal command buttons', () => {
+  it('renders the CLI input surface before the command button panel', async () => {
+    const { app, uploadInfo } = await setupUploadedApp();
+    const container = renderTerminal(app, uploadInfo);
+    const terminal = findByTestId(container, 'cli-terminal');
+    const commandButtons = findByTestId(container, 'cli-command-buttons');
+
+    expect(
+      terminal.compareDocumentPosition(commandButtons) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
   it('runs a track-scoped CLI command with the uploaded trackId', async () => {
     const { app, uploadInfo } = await setupUploadedApp();
     const container = renderTerminal(app, uploadInfo);
@@ -93,6 +105,16 @@ function renderTerminal(
   });
 
   return container;
+}
+
+function findByTestId(container: HTMLElement, testId: string): HTMLElement {
+  const element = container.querySelector(`[data-testid="${testId}"]`);
+
+  if (!(element instanceof HTMLElement)) {
+    throw new Error(`Could not find element "${testId}".`);
+  }
+
+  return element;
 }
 
 function findCommandButton(container: HTMLElement, usage: string): HTMLElement {

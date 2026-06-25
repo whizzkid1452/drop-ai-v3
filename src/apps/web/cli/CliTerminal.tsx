@@ -162,6 +162,12 @@ export function CliTerminal({ uploadInfo }: CliTerminalProps) {
   return (
     <div className={styles.cliSurface}>
       <div
+        className={styles.terminalHost}
+        data-testid="cli-terminal"
+        ref={containerRef}
+        onClick={() => terminalRef.current?.focus()}
+      />
+      <div
         className={styles.commandButtonPanel}
         data-testid="cli-command-buttons"
       >
@@ -192,12 +198,6 @@ export function CliTerminal({ uploadInfo }: CliTerminalProps) {
           </section>
         ))}
       </div>
-      <div
-        className={styles.terminalHost}
-        data-testid="cli-terminal"
-        ref={containerRef}
-        onClick={() => terminalRef.current?.focus()}
-      />
     </div>
   );
 }
