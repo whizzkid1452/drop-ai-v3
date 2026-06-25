@@ -2,9 +2,13 @@ import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { runCli } from '@/apps/cli/cli-runner';
+import { runCli, type CliUploadFileRequestResult } from '@/apps/cli/cli-runner';
 import { useAppController, useSessionState } from '../AppProvider';
 import type { UploadedSessionInfo } from '../upload/upload-session-flow';
+import {
+  SUPPORTED_AUDIO_FILE_ACCEPT,
+  validateAudioFile,
+} from '../upload/upload-file-validation';
 import {
   createCliCommandButtons,
   groupCliCommandButtons,
@@ -61,6 +65,7 @@ export function CliTerminal({ uploadInfo }: CliTerminalProps) {
           const result = await runCli(commandInput, {
             appController,
             getStatusText: () => formatSessionStatus(sessionRef.current),
+            requestUploadFile: requestCliUploadFile,
             uploadInfo,
           });
 
@@ -195,6 +200,44 @@ export function CliTerminal({ uploadInfo }: CliTerminalProps) {
       />
     </div>
   );
+}
+
+function requestCliUploadFile(): Promise<CliUploadFileRequestResult> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.accept = SUPPORTED_AUDIO_FILE_ACCEPT;
+    input.type = 'file';
+    input.style.display = 'none';
+
+    function settle(result: CliUploadFileRequestResult): void {
+      input.remove();
+      resolve(result);
+    }
+
+    input.addEventListener('cancel', () => {
+      settle({ ok: false, message: 'Upload canceled.' });
+    });
+
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+
+      if (!file) {
+        settle({ ok: false, message: 'Upload canceled.' });
+        return;
+      }
+
+      const validation = validateAudioFile(file);
+      if (!validation.ok) {
+        settle({ ok: false, message: validation.message });
+        return;
+      }
+
+      settle({ ok: true, file });
+    });
+
+    document.body.append(input);
+    input.click();
+  });
 }
 
 function fitTerminal(fitAddon: FitAddon): void {
