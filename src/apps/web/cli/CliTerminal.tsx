@@ -2,7 +2,11 @@ import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { runCli, type CliUploadFileRequestResult } from '@/apps/cli/cli-runner';
+import {
+  isAssetUploadInput,
+  runCli,
+  type CliUploadFileRequestResult,
+} from '@/apps/cli/cli-runner';
 import { useAppController, useSessionState } from '../AppProvider';
 import type { UploadedSessionInfo } from '../upload/upload-session-flow';
 import {
@@ -25,6 +29,12 @@ export interface CliTerminalProps {
   uploadInfo: UploadedSessionInfo;
 }
 
+interface QueuedCliInput {
+  commandInput: string;
+  requestUploadFile?: () => Promise<CliUploadFileRequestResult>;
+  terminal: Terminal;
+}
+
 export function CliTerminal({ uploadInfo }: CliTerminalProps) {
   const appController = useAppController();
   const session = useSessionState();
@@ -42,30 +52,14 @@ export function CliTerminal({ uploadInfo }: CliTerminalProps) {
     sessionRef.current = session;
   }, [session]);
 
-  const executeCliInput = useCallback(
-    (input: string, options: { echoInput: boolean }): void => {
-      const commandInput = input.trim();
-      const terminal = terminalRef.current;
-
-      if (!terminal || !commandInput) {
-        return;
-      }
-
-      if (options.echoInput) {
-        if (inputRef.current.length > 0) {
-          terminal.write(`\r\n${PROMPT}`);
-        }
-        inputRef.current = '';
-        terminal.write(`${commandInput}\r\n`);
-        terminal.focus();
-      }
-
+  const enqueueCliInput = useCallback(
+    ({ commandInput, requestUploadFile, terminal }: QueuedCliInput): void => {
       commandQueueRef.current = commandQueueRef.current
         .then(async () => {
           const result = await runCli(commandInput, {
             appController,
             getStatusText: () => formatSessionStatus(sessionRef.current),
-            requestUploadFile: requestCliUploadFile,
+            requestUploadFile,
             uploadInfo,
           });
 
@@ -85,6 +79,39 @@ export function CliTerminal({ uploadInfo }: CliTerminalProps) {
         });
     },
     [appController, uploadInfo]
+  );
+
+  const executeCliInput = useCallback(
+    (input: string, options: { echoInput: boolean }): void => {
+      const commandInput = input.trim();
+      const terminal = terminalRef.current;
+
+      if (!terminal || !commandInput) {
+        return;
+      }
+
+      if (options.echoInput) {
+        if (inputRef.current.length > 0) {
+          terminal.write(`\r\n${PROMPT}`);
+        }
+        inputRef.current = '';
+        terminal.write(`${commandInput}\r\n`);
+        terminal.focus();
+      }
+
+      if (isAssetUploadInput(commandInput)) {
+        const uploadFileRequest = requestCliUploadFile();
+        enqueueCliInput({
+          commandInput,
+          requestUploadFile: () => uploadFileRequest,
+          terminal,
+        });
+        return;
+      }
+
+      enqueueCliInput({ commandInput, terminal });
+    },
+    [enqueueCliInput]
   );
 
   useEffect(() => {

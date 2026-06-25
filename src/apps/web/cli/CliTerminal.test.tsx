@@ -86,6 +86,23 @@ describe('CliTerminal command buttons', () => {
       `volume ${uploadInfo.trackId} 0.8`
     );
   });
+
+  it('opens the upload file picker during the button click handler', async () => {
+    const { app, uploadInfo } = await setupUploadedApp();
+    const container = renderTerminal(app, uploadInfo);
+    const button = findCommandButton(container, 'asset upload');
+    const clickSpy = vi
+      .spyOn(HTMLInputElement.prototype, 'click')
+      .mockImplementation(() => undefined);
+
+    act(() => {
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    clickSpy.mockRestore();
+  });
 });
 
 function renderTerminal(

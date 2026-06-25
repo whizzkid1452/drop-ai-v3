@@ -49,7 +49,7 @@ export async function runCli(
   return deps.appController.executeCommand(parsed.command);
 }
 
-function isAssetUploadInput(input: string): boolean {
+export function isAssetUploadInput(input: string): boolean {
   const command = input.trim();
   return command === 'asset upload' || command === 'asset register';
 }
