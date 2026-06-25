@@ -107,6 +107,48 @@ describe('parseCliInput', () => {
     });
   });
 
+  it('maps export range input to export range commands', () => {
+    expect(parseCliInput('export start 1.5')).toEqual({
+      ok: true,
+      command: {
+        type: 'session.exportRange.start.set',
+        payload: { seconds: 1.5 },
+      },
+    });
+    expect(parseCliInput('export end 4')).toEqual({
+      ok: true,
+      command: {
+        type: 'session.exportRange.end.set',
+        payload: { seconds: 4 },
+      },
+    });
+    expect(parseCliInput('export fade-in 0.25')).toEqual({
+      ok: true,
+      command: {
+        type: 'session.exportRange.fadeIn.set',
+        payload: { seconds: 0.25 },
+      },
+    });
+    expect(parseCliInput('export fade-out 0.5')).toEqual({
+      ok: true,
+      command: {
+        type: 'session.exportRange.fadeOut.set',
+        payload: { seconds: 0.5 },
+      },
+    });
+    expect(parseCliInput('export preview')).toEqual({
+      ok: true,
+      command: { type: 'session.exportRange.preview.play' },
+    });
+    expect(parseCliInput('export range clip.wav')).toEqual({
+      ok: true,
+      command: {
+        type: 'session.exportRange.export',
+        payload: { filename: 'clip.wav' },
+      },
+    });
+  });
+
   it('returns a parser error for missing or unknown commands', () => {
     expect(parseCliInput('')).toEqual({
       ok: false,

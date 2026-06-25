@@ -174,6 +174,48 @@ export const cliCommandRegistry = [
   }),
   command({
     group: 'Session',
+    usage: 'export start <seconds>',
+    description: 'Set the export range start time.',
+    prefix: ['export', 'start'],
+    parse: parseExportRangeStart,
+  }),
+  command({
+    group: 'Session',
+    usage: 'export end <seconds>',
+    description: 'Set the export range end time.',
+    prefix: ['export', 'end'],
+    parse: parseExportRangeEnd,
+  }),
+  command({
+    group: 'Session',
+    usage: 'export fade-in <seconds>',
+    description: 'Set output fade in duration for range export.',
+    prefix: ['export', 'fade-in'],
+    parse: parseExportRangeFadeIn,
+  }),
+  command({
+    group: 'Session',
+    usage: 'export fade-out <seconds>',
+    description: 'Set output fade out duration for range export.',
+    prefix: ['export', 'fade-out'],
+    parse: parseExportRangeFadeOut,
+  }),
+  command({
+    group: 'Session',
+    usage: 'export preview',
+    description: 'Preview the configured export range.',
+    prefix: ['export', 'preview'],
+    parse: () => success({ type: 'session.exportRange.preview.play' }),
+  }),
+  command({
+    group: 'Session',
+    usage: 'export range [filename]',
+    description: 'Export the configured range as a WAV file.',
+    prefix: ['export', 'range'],
+    parse: parseExportRangeExport,
+  }),
+  command({
+    group: 'Session',
     usage: 'export [filename]',
     description: 'Alias for session export.',
     prefix: ['export'],
@@ -485,6 +527,66 @@ function parseExportAlias(tokens: string[]): CliParseResult {
     type: 'session.export',
     payload:
       tokens.length > 1 ? { filename: tokens.slice(1).join(' ') } : undefined,
+  });
+}
+
+function parseExportRangeStart(tokens: string[]): CliParseResult {
+  const seconds = parseRequiredNumber(tokens[2], 'seconds');
+
+  if (!seconds.ok) {
+    return seconds;
+  }
+
+  return success({
+    type: 'session.exportRange.start.set',
+    payload: { seconds: seconds.value },
+  });
+}
+
+function parseExportRangeEnd(tokens: string[]): CliParseResult {
+  const seconds = parseRequiredNumber(tokens[2], 'seconds');
+
+  if (!seconds.ok) {
+    return seconds;
+  }
+
+  return success({
+    type: 'session.exportRange.end.set',
+    payload: { seconds: seconds.value },
+  });
+}
+
+function parseExportRangeFadeIn(tokens: string[]): CliParseResult {
+  const seconds = parseRequiredNumber(tokens[2], 'seconds');
+
+  if (!seconds.ok) {
+    return seconds;
+  }
+
+  return success({
+    type: 'session.exportRange.fadeIn.set',
+    payload: { seconds: seconds.value },
+  });
+}
+
+function parseExportRangeFadeOut(tokens: string[]): CliParseResult {
+  const seconds = parseRequiredNumber(tokens[2], 'seconds');
+
+  if (!seconds.ok) {
+    return seconds;
+  }
+
+  return success({
+    type: 'session.exportRange.fadeOut.set',
+    payload: { seconds: seconds.value },
+  });
+}
+
+function parseExportRangeExport(tokens: string[]): CliParseResult {
+  return success({
+    type: 'session.exportRange.export',
+    payload:
+      tokens.length > 2 ? { filename: tokens.slice(2).join(' ') } : undefined,
   });
 }
 

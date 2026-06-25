@@ -22,6 +22,9 @@ describe('cliCommandRegistry', () => {
     expect(commandList).toContain(
       '  session export [filename] - Export the current session as a WAV file.'
     );
+    expect(commandList).toContain(
+      '  export range [filename] - Export the configured range as a WAV file.'
+    );
   });
 
   it('matches more specific command prefixes before generic prefixes', () => {
@@ -30,6 +33,13 @@ describe('cliCommandRegistry', () => {
       command: {
         type: 'playback.loop.set',
         payload: { start: 0, end: 1, enabled: false },
+      },
+    });
+    expect(parseRegisteredCliCommand(['export', 'range'])).toEqual({
+      ok: true,
+      command: {
+        type: 'session.exportRange.export',
+        payload: undefined,
       },
     });
   });
