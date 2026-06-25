@@ -2,6 +2,7 @@ import type { IAudioEngine } from '@/audio-engine/audio-engine';
 import { ToneAudioEngine } from '@/audio-engine/tone/tone-audio-engine';
 import { AppController } from '@/controllers/app-controller';
 import { AssetController } from '@/controllers/asset-controller';
+import { ExportRangeController } from '@/controllers/export-range-controller';
 import {
   createUuidGenerator,
   type IdGenerator,
@@ -66,9 +67,15 @@ export function composeApp({
     audioEngine,
   });
 
+  const exportRangeController = new ExportRangeController({
+    sessionStore,
+    audioEngine,
+  });
+
   const controller = new AppController({
     playbackController,
     assetController,
+    exportRangeController,
     trackController,
     sessionExportController,
   });
