@@ -10,6 +10,7 @@ export {
   CommandController,
   type AssetCommandTarget,
   type CommandControllerDependencies,
+  type ExportRangeCommandTarget,
   type PlaybackCommandTarget,
   type SessionExportCommandTarget,
   type TrackCommandTarget,
@@ -28,3 +29,7 @@ export type {
   SessionExportResult,
   TrackAddResult,
 } from './command-result';
+export {
+  ExportRangeController,
+  type ExportRangeControllerDependencies,
+} from './export-range-controller';

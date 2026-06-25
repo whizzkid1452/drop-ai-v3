@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CommandController,
   type AssetCommandTarget,
+  type ExportRangeCommandTarget,
   type PlaybackCommandTarget,
   type SessionExportCommandTarget,
   type TrackCommandTarget,
@@ -12,6 +13,7 @@ describe('CommandController', () => {
   let assetController: AssetCommandTarget;
   let trackController: TrackCommandTarget;
   let sessionExportController: SessionExportCommandTarget;
+  let exportRangeController: ExportRangeCommandTarget;
   let commandController: CommandController;
 
   beforeEach(() => {
@@ -53,9 +55,22 @@ describe('CommandController', () => {
       exportSession: vi.fn().mockResolvedValue(undefined),
     };
 
+    exportRangeController = {
+      exportRange: vi.fn().mockResolvedValue({
+        blob: new Blob(['wav'], { type: 'audio/wav' }),
+        filename: 'clip.wav',
+      }),
+      previewExportRange: vi.fn().mockResolvedValue(undefined),
+      setExportRangeEnd: vi.fn(),
+      setExportRangeFadeIn: vi.fn(),
+      setExportRangeFadeOut: vi.fn(),
+      setExportRangeStart: vi.fn(),
+    };
+
     commandController = new CommandController({
       playbackController,
       assetController,
+      exportRangeController,
       trackController,
       sessionExportController,
     });
@@ -220,6 +235,47 @@ describe('CommandController', () => {
     expect(sessionExportController.exportSession).toHaveBeenCalledWith(
       'mix.wav'
     );
+  });
+
+  it('dispatches export range commands to ExportRangeController', async () => {
+    await commandController.execute({
+      type: 'session.exportRange.end.set',
+      payload: { seconds: 8 },
+    });
+    await commandController.execute({
+      type: 'session.exportRange.start.set',
+      payload: { seconds: 2 },
+    });
+    await commandController.execute({
+      type: 'session.exportRange.fadeIn.set',
+      payload: { seconds: 0.5 },
+    });
+    await commandController.execute({
+      type: 'session.exportRange.fadeOut.set',
+      payload: { seconds: 0.25 },
+    });
+    await commandController.execute({
+      type: 'session.exportRange.preview.play',
+    });
+    const result = await commandController.execute({
+      type: 'session.exportRange.export',
+      payload: { filename: 'clip.wav' },
+    });
+
+    expect(exportRangeController.setExportRangeEnd).toHaveBeenCalledWith(8);
+    expect(exportRangeController.setExportRangeStart).toHaveBeenCalledWith(2);
+    expect(exportRangeController.setExportRangeFadeIn).toHaveBeenCalledWith(
+      0.5
+    );
+    expect(exportRangeController.setExportRangeFadeOut).toHaveBeenCalledWith(
+      0.25
+    );
+    expect(exportRangeController.previewExportRange).toHaveBeenCalledTimes(1);
+    expect(exportRangeController.exportRange).toHaveBeenCalledWith('clip.wav');
+    expect(result).toMatchObject({
+      ok: true,
+      data: { filename: 'clip.wav' },
+    });
   });
 
   it('returns an execution failure when a target controller throws', async () => {

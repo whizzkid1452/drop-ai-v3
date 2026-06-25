@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppController } from './app-controller';
 import type {
   AssetCommandTarget,
+  ExportRangeCommandTarget,
   PlaybackCommandTarget,
   SessionExportCommandTarget,
   TrackCommandTarget,
@@ -10,6 +11,7 @@ import type {
 describe('AppController', () => {
   let playbackController: PlaybackCommandTarget;
   let assetController: AssetCommandTarget;
+  let exportRangeController: ExportRangeCommandTarget;
   let trackController: TrackCommandTarget;
   let sessionExportController: SessionExportCommandTarget;
 
@@ -51,12 +53,22 @@ describe('AppController', () => {
     sessionExportController = {
       exportSession: vi.fn().mockResolvedValue(undefined),
     };
+
+    exportRangeController = {
+      exportRange: vi.fn().mockResolvedValue(undefined),
+      previewExportRange: vi.fn().mockResolvedValue(undefined),
+      setExportRangeEnd: vi.fn(),
+      setExportRangeFadeIn: vi.fn(),
+      setExportRangeFadeOut: vi.fn(),
+      setExportRangeStart: vi.fn(),
+    };
   });
 
   it('exposes only the unified command entry point', () => {
     const appController = new AppController({
       playbackController,
       assetController,
+      exportRangeController,
       trackController,
       sessionExportController,
     });
@@ -72,6 +84,7 @@ describe('AppController', () => {
     const appController = new AppController({
       playbackController,
       assetController,
+      exportRangeController,
       trackController,
       sessionExportController,
     });
@@ -90,6 +103,7 @@ describe('AppController', () => {
     const appController = new AppController({
       playbackController,
       assetController,
+      exportRangeController,
       trackController,
       sessionExportController,
     });

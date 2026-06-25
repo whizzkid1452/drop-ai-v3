@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AppController } from './app-controller';
 import { AssetController } from './asset-controller';
+import { ExportRangeController } from './export-range-controller';
 import { PlaybackController } from './playback-controller';
 import { SessionExportController } from './session-export-controller';
 import { TrackController } from './track-controller';
@@ -69,10 +70,15 @@ function setup(): Harness {
     sessionStore: store,
     audioEngine: audio,
   });
+  const exportRange = new ExportRangeController({
+    sessionStore: store,
+    audioEngine: audio,
+  });
 
   const app = new AppController({
     playbackController: playback,
     assetController: asset,
+    exportRangeController: exportRange,
     trackController: track,
     sessionExportController: sessionExport,
   });
@@ -206,6 +212,54 @@ describe('command-controller integration: session.export', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error.code).toBe('COMMAND_EXECUTION_FAILED');
+    }
+  });
+});
+
+describe('command-controller integration: session.exportRange', () => {
+  it('updates export range state through commands', async () => {
+    const h = setup();
+
+    await h.app.executeCommand({
+      type: 'session.exportRange.end.set',
+      payload: { seconds: 8 },
+    });
+    await h.app.executeCommand({
+      type: 'session.exportRange.start.set',
+      payload: { seconds: 2 },
+    });
+
+    expect(h.store.getState().exportRange).toMatchObject({
+      endSeconds: 8,
+      startSeconds: 2,
+    });
+  });
+
+  it('exports a range when it intersects an existing region', async () => {
+    const h = setup();
+    await h.app.executeCommand({ type: 'track.add' });
+    await h.app.executeCommand({
+      type: 'region.add',
+      payload: { trackId: 'track-1', assetId: 'asset-1', startTime: 0 },
+    });
+    await h.app.executeCommand({
+      type: 'session.exportRange.end.set',
+      payload: { seconds: 3 },
+    });
+    await h.app.executeCommand({
+      type: 'session.exportRange.start.set',
+      payload: { seconds: 1 },
+    });
+
+    const result = await h.app.executeCommand({
+      type: 'session.exportRange.export',
+      payload: { filename: 'clip.wav' },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok && isExportResultData(result.data)) {
+      expect(result.data.filename).toBe('clip.wav');
+      expect(result.data.blob).toBeInstanceOf(Blob);
     }
   });
 });

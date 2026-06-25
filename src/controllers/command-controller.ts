@@ -71,9 +71,19 @@ export interface SessionExportCommandTarget {
   exportSession(filename?: string): Promise<SessionExportResult>;
 }
 
+export interface ExportRangeCommandTarget {
+  exportRange(filename?: string): Promise<SessionExportResult>;
+  previewExportRange(): Promise<void>;
+  setExportRangeEnd(seconds: number): void;
+  setExportRangeFadeIn(seconds: number): void;
+  setExportRangeFadeOut(seconds: number): void;
+  setExportRangeStart(seconds: number): void;
+}
+
 export interface CommandControllerDependencies {
   playbackController: PlaybackCommandTarget;
   assetController: AssetCommandTarget;
+  exportRangeController: ExportRangeCommandTarget;
   trackController: TrackCommandTarget;
   sessionExportController: SessionExportCommandTarget;
 }
@@ -81,17 +91,20 @@ export interface CommandControllerDependencies {
 export class CommandController {
   private readonly playbackController: PlaybackCommandTarget;
   private readonly assetController: AssetCommandTarget;
+  private readonly exportRangeController: ExportRangeCommandTarget;
   private readonly trackController: TrackCommandTarget;
   private readonly sessionExportController: SessionExportCommandTarget;
 
   constructor({
     playbackController,
     assetController,
+    exportRangeController,
     trackController,
     sessionExportController,
   }: CommandControllerDependencies) {
     this.playbackController = playbackController;
     this.assetController = assetController;
+    this.exportRangeController = exportRangeController;
     this.trackController = trackController;
     this.sessionExportController = sessionExportController;
   }
@@ -224,6 +237,35 @@ export class CommandController {
 
       case 'session.export':
         return await this.sessionExportController.exportSession(
+          command.payload?.filename
+        );
+
+      case 'session.exportRange.start.set':
+        this.exportRangeController.setExportRangeStart(command.payload.seconds);
+        return undefined;
+
+      case 'session.exportRange.end.set':
+        this.exportRangeController.setExportRangeEnd(command.payload.seconds);
+        return undefined;
+
+      case 'session.exportRange.fadeIn.set':
+        this.exportRangeController.setExportRangeFadeIn(
+          command.payload.seconds
+        );
+        return undefined;
+
+      case 'session.exportRange.fadeOut.set':
+        this.exportRangeController.setExportRangeFadeOut(
+          command.payload.seconds
+        );
+        return undefined;
+
+      case 'session.exportRange.preview.play':
+        await this.exportRangeController.previewExportRange();
+        return undefined;
+
+      case 'session.exportRange.export':
+        return await this.exportRangeController.exportRange(
           command.payload?.filename
         );
 
