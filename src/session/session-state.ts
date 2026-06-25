@@ -31,11 +31,19 @@ export interface PlaybackState {
   loop: LoopState;
 }
 
+export interface ExportRangeState {
+  startSeconds: number;
+  endSeconds: number;
+  fadeInSeconds: number;
+  fadeOutSeconds: number;
+}
+
 export interface SessionState {
   id: string;
   trackOrder: string[];
   tracksById: Record<string, TrackState>;
   playback: PlaybackState;
+  exportRange: ExportRangeState;
 }
 
 export interface CreateEmptySessionInput {
@@ -46,6 +54,9 @@ const DEFAULT_BPM = 120;
 const DEFAULT_MASTER_VOLUME = 1;
 const DEFAULT_LOOP_START = 0;
 const DEFAULT_LOOP_END = 4;
+const DEFAULT_EXPORT_RANGE_START = 0;
+const DEFAULT_EXPORT_RANGE_END = 4;
+const DEFAULT_EXPORT_FADE_SECONDS = 0;
 
 export function createEmptySession(
   input: CreateEmptySessionInput
@@ -64,6 +75,12 @@ export function createEmptySession(
         end: DEFAULT_LOOP_END,
         enabled: false,
       },
+    },
+    exportRange: {
+      startSeconds: DEFAULT_EXPORT_RANGE_START,
+      endSeconds: DEFAULT_EXPORT_RANGE_END,
+      fadeInSeconds: DEFAULT_EXPORT_FADE_SECONDS,
+      fadeOutSeconds: DEFAULT_EXPORT_FADE_SECONDS,
     },
   };
 }

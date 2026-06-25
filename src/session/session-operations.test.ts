@@ -11,6 +11,10 @@ import {
   setTrackSolo,
   setTrackVolume,
   setBpm,
+  setExportRangeEnd,
+  setExportRangeFadeIn,
+  setExportRangeFadeOut,
+  setExportRangeStart,
   setLoop,
   setMasterVolume,
   setPlaying,
@@ -636,5 +640,65 @@ describe('setLoop', () => {
     expect(() =>
       setLoop(session, { start: 5, end: 2, enabled: false })
     ).not.toThrow();
+  });
+});
+
+describe('export range operations', () => {
+  it('updates export range start and end seconds', () => {
+    const session = freshSession();
+
+    const withEnd = setExportRangeEnd(session, { seconds: 8 });
+    const result = setExportRangeStart(withEnd, { seconds: 2 });
+
+    expect(result.exportRange).toEqual({
+      startSeconds: 2,
+      endSeconds: 8,
+      fadeInSeconds: 0,
+      fadeOutSeconds: 0,
+    });
+  });
+
+  it('rejects an export range start that is not before the end', () => {
+    const session = freshSession();
+
+    expect(() => setExportRangeStart(session, { seconds: 4 })).toThrow(
+      /export range start/i
+    );
+  });
+
+  it('rejects an export range end that is not after the start', () => {
+    const session = freshSession();
+
+    expect(() => setExportRangeEnd(session, { seconds: 0 })).toThrow(
+      /export range end/i
+    );
+  });
+
+  it('updates export range fade in and fade out seconds', () => {
+    const session = freshSession();
+
+    const withFadeIn = setExportRangeFadeIn(session, { seconds: 0.5 });
+    const result = setExportRangeFadeOut(withFadeIn, { seconds: 0.25 });
+
+    expect(result.exportRange.fadeInSeconds).toBe(0.5);
+    expect(result.exportRange.fadeOutSeconds).toBe(0.25);
+  });
+
+  it('rejects export fades that exceed the range duration', () => {
+    const session = setExportRangeEnd(freshSession(), { seconds: 1 });
+    const withFadeIn = setExportRangeFadeIn(session, { seconds: 0.75 });
+
+    expect(() => setExportRangeFadeOut(withFadeIn, { seconds: 0.5 })).toThrow(
+      /export fades/i
+    );
+  });
+
+  it('does not mutate the input state', () => {
+    const session = freshSession();
+    const snapshotBefore = JSON.parse(JSON.stringify(session));
+
+    setExportRangeEnd(session, { seconds: 8 });
+
+    expect(session).toEqual(snapshotBefore);
   });
 });

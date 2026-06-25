@@ -37,4 +37,15 @@ describe('createEmptySession', () => {
       enabled: false,
     });
   });
+
+  it('defaults export range to the first four seconds without fades', () => {
+    const session = createEmptySession(SESSION_FIXTURE);
+
+    expect(session.exportRange).toEqual({
+      startSeconds: 0,
+      endSeconds: 4,
+      fadeInSeconds: 0,
+      fadeOutSeconds: 0,
+    });
+  });
 });

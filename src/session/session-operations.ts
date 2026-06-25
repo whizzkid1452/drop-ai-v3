@@ -332,6 +332,116 @@ export function setLoop(
   };
 }
 
+export interface SetExportRangeSecondsInput {
+  seconds: number;
+}
+
+export function setExportRangeStart(
+  state: SessionState,
+  input: SetExportRangeSecondsInput
+): SessionState {
+  assertNonNegativeFiniteSeconds(input.seconds, 'Export range start');
+  if (input.seconds >= state.exportRange.endSeconds) {
+    throw new Error(
+      'Export range start must be less than end. ' +
+        `start=${input.seconds} end=${state.exportRange.endSeconds}`
+    );
+  }
+  const nextExportRange = {
+    ...state.exportRange,
+    startSeconds: input.seconds,
+  };
+  assertValidExportRange(nextExportRange);
+
+  return {
+    ...state,
+    exportRange: nextExportRange,
+  };
+}
+
+export function setExportRangeEnd(
+  state: SessionState,
+  input: SetExportRangeSecondsInput
+): SessionState {
+  assertNonNegativeFiniteSeconds(input.seconds, 'Export range end');
+  if (input.seconds <= state.exportRange.startSeconds) {
+    throw new Error(
+      'Export range end must be greater than start. ' +
+        `start=${state.exportRange.startSeconds} end=${input.seconds}`
+    );
+  }
+  const nextExportRange = {
+    ...state.exportRange,
+    endSeconds: input.seconds,
+  };
+  assertValidExportRange(nextExportRange);
+
+  return {
+    ...state,
+    exportRange: nextExportRange,
+  };
+}
+
+export function setExportRangeFadeIn(
+  state: SessionState,
+  input: SetExportRangeSecondsInput
+): SessionState {
+  assertNonNegativeFiniteSeconds(input.seconds, 'Export fade in');
+  const nextExportRange = {
+    ...state.exportRange,
+    fadeInSeconds: input.seconds,
+  };
+  assertValidExportRange(nextExportRange);
+
+  return {
+    ...state,
+    exportRange: nextExportRange,
+  };
+}
+
+export function setExportRangeFadeOut(
+  state: SessionState,
+  input: SetExportRangeSecondsInput
+): SessionState {
+  assertNonNegativeFiniteSeconds(input.seconds, 'Export fade out');
+  const nextExportRange = {
+    ...state.exportRange,
+    fadeOutSeconds: input.seconds,
+  };
+  assertValidExportRange(nextExportRange);
+
+  return {
+    ...state,
+    exportRange: nextExportRange,
+  };
+}
+
+function assertNonNegativeFiniteSeconds(value: number, label: string): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`${label} must be a non-negative finite number: ${value}`);
+  }
+}
+
+function assertValidExportRange(
+  exportRange: SessionState['exportRange']
+): void {
+  const duration = exportRange.endSeconds - exportRange.startSeconds;
+
+  if (duration <= 0) {
+    throw new Error(
+      'Export range end must be greater than start. ' +
+        `start=${exportRange.startSeconds} end=${exportRange.endSeconds}`
+    );
+  }
+
+  if (exportRange.fadeInSeconds + exportRange.fadeOutSeconds > duration) {
+    throw new Error(
+      'Export fades must fit within export range. ' +
+        `fadeIn=${exportRange.fadeInSeconds} fadeOut=${exportRange.fadeOutSeconds} duration=${duration}`
+    );
+  }
+}
+
 export function splitRegion(
   state: SessionState,
   input: SplitRegionInput
@@ -403,4 +513,8 @@ export const sessionOps = {
   setBpm,
   setMasterVolume,
   setLoop,
+  setExportRangeStart,
+  setExportRangeEnd,
+  setExportRangeFadeIn,
+  setExportRangeFadeOut,
 };
