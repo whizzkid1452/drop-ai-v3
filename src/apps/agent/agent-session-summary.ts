@@ -96,3 +96,9 @@ export function createAgentSessionSummary(
     }),
   };
 }
+
+export function createAgentSessionSummaryFingerprint(
+  summary: AgentSessionSummary
+): string {
+  return JSON.stringify(summary);
+}
