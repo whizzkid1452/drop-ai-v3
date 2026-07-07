@@ -80,6 +80,34 @@ export const primaryButton = style({
   },
 });
 
+export const secondaryButton = style({
+  minWidth: 120,
+  border: `1px solid ${vars.color.borderStrong}`,
+  borderRadius: vars.radius.control,
+  padding: `${vars.space.md} ${vars.space.lg}`,
+  background: vars.color.panelRaised,
+  color: vars.color.text,
+  cursor: 'pointer',
+  fontWeight: 700,
+  transition:
+    'background 120ms ease, border-color 120ms ease, transform 120ms ease',
+  selectors: {
+    '&:hover:not(:disabled)': {
+      borderColor: vars.color.accent,
+      background: vars.color.surfaceHighlight,
+      transform: 'translateY(-1px)',
+    },
+    '&:focus-visible': {
+      outline: `2px solid ${vars.color.accentStrong}`,
+      outlineOffset: 3,
+    },
+    '&:disabled': {
+      cursor: 'not-allowed',
+      opacity: 0.5,
+    },
+  },
+});
+
 export const layoutGrid = style({
   display: 'grid',
   gridTemplateColumns: 'minmax(260px, 360px) minmax(0, 1fr)',
@@ -304,4 +332,111 @@ export const loading = style({
   color: vars.color.textMuted,
   fontFamily: vars.font.mono,
   fontSize: 13,
+});
+
+export const agentPanel = style([
+  panel,
+  {
+    display: 'grid',
+    gap: vars.space.lg,
+  },
+]);
+
+export const agentHeader = style({
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: vars.space.md,
+});
+
+export const agentStatus = style({
+  margin: 0,
+  color: vars.color.textMuted,
+  fontFamily: vars.font.mono,
+  fontSize: 12,
+  whiteSpace: 'nowrap',
+});
+
+export const agentForm = style({
+  display: 'grid',
+  gap: vars.space.md,
+});
+
+export const agentInputLabel = style({
+  display: 'grid',
+  gap: vars.space.sm,
+});
+
+export const agentTextarea = style({
+  width: '100%',
+  minHeight: 92,
+  resize: 'vertical',
+  border: `1px solid ${vars.color.border}`,
+  borderRadius: vars.radius.control,
+  padding: vars.space.md,
+  background: vars.color.panelRaised,
+  color: vars.color.text,
+  font: 'inherit',
+  lineHeight: 1.5,
+  selectors: {
+    '&:focus-visible': {
+      outline: `2px solid ${vars.color.accentStrong}`,
+      outlineOffset: 3,
+    },
+  },
+});
+
+export const agentStepList = style({
+  display: 'grid',
+  gap: vars.space.sm,
+  margin: 0,
+  padding: 0,
+  listStyle: 'none',
+});
+
+export const agentStep = style({
+  border: `1px solid ${vars.color.border}`,
+  borderRadius: vars.radius.control,
+  padding: vars.space.md,
+  background: vars.color.panelRaised,
+});
+
+export const agentStepHeader = style({
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: vars.space.md,
+});
+
+export const agentStepCommand = style({
+  overflow: 'hidden',
+  fontFamily: vars.font.mono,
+  fontSize: 13,
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+});
+
+export const agentReason = style({
+  margin: `${vars.space.sm} 0 0`,
+  color: vars.color.textMuted,
+  fontSize: 13,
+  lineHeight: 1.5,
+});
+
+export const agentPayload = style({
+  overflow: 'auto',
+  margin: `${vars.space.md} 0 0`,
+  border: `1px solid ${vars.color.border}`,
+  borderRadius: vars.radius.control,
+  padding: vars.space.sm,
+  background: '#101214',
+  color: vars.color.text,
+  fontFamily: vars.font.mono,
+  fontSize: 12,
+});
+
+export const agentActionRow = style({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: vars.space.sm,
 });
