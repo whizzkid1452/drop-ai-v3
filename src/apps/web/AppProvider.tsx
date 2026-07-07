@@ -7,8 +7,10 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
+import { AgentWorkflow, type IAgentPlanner } from '@/apps/agent/agent-workflow';
 import { createApp, type IAppHandle } from '@/composition/create-app';
 import type { AppController } from '@/controllers/app-controller';
+import { createDefaultAgentPlanner } from './agent/default-agent-planner';
 
 export type WebSessionState = ReturnType<
   IAppHandle['sessionReader']['getState']
@@ -16,10 +18,17 @@ export type WebSessionState = ReturnType<
 
 export interface AppProviderProps {
   children: ReactNode;
+  createAgentPlanId?: () => string;
+  createAgentPlanner?: () => IAgentPlanner;
   createAppHandle?: () => IAppHandle;
 }
 
-const WebAppContext = createContext<IAppHandle | null>(null);
+interface WebAppRuntime {
+  agentWorkflow: AgentWorkflow;
+  app: IAppHandle;
+}
+
+const WebAppContext = createContext<WebAppRuntime | null>(null);
 
 function createDefaultAppHandle(): IAppHandle {
   return createApp();
@@ -27,25 +36,41 @@ function createDefaultAppHandle(): IAppHandle {
 
 export function AppProvider({
   children,
+  createAgentPlanId,
+  createAgentPlanner = createDefaultAgentPlanner,
   createAppHandle = createDefaultAppHandle,
 }: AppProviderProps) {
-  const [app] = useState(() => createAppHandle());
+  const [runtime] = useState(() => {
+    const app = createAppHandle();
+    const agentWorkflow = new AgentWorkflow({
+      commandExecutor: app.controller,
+      createPlanId: createAgentPlanId,
+      getSessionState: () => app.sessionReader.getState(),
+      planner: createAgentPlanner(),
+    });
+
+    return { agentWorkflow, app };
+  });
 
   useEffect(() => {
-    return () => app.dispose();
-  }, [app]);
+    return () => runtime.app.dispose();
+  }, [runtime]);
 
   return (
-    <WebAppContext.Provider value={app}>{children}</WebAppContext.Provider>
+    <WebAppContext.Provider value={runtime}>{children}</WebAppContext.Provider>
   );
 }
 
 export function useAppController(): AppController {
-  return useWebAppContext().controller;
+  return useWebAppContext().app.controller;
+}
+
+export function useAgentWorkflow(): AgentWorkflow {
+  return useWebAppContext().agentWorkflow;
 }
 
 export function useSessionState(): WebSessionState {
-  const app = useWebAppContext();
+  const { app } = useWebAppContext();
   const subscribe = useCallback(
     (onStoreChange: () => void) => app.sessionReader.subscribe(onStoreChange),
     [app]
@@ -55,12 +80,12 @@ export function useSessionState(): WebSessionState {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
-function useWebAppContext(): IAppHandle {
-  const app = useContext(WebAppContext);
+function useWebAppContext(): WebAppRuntime {
+  const runtime = useContext(WebAppContext);
 
-  if (!app) {
+  if (!runtime) {
     throw new Error('AppProvider is required for Drop AI web hooks.');
   }
 
-  return app;
+  return runtime;
 }
