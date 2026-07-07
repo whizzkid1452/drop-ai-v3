@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ScriptedAgentPlanner } from '@/apps/agent/scripted-agent-planner';
+import type { IAgentPlanner } from '@/apps/agent/agent-workflow';
 import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
 import { createApp, type IAppHandle } from '@/composition/create-app';
 import { createTestIdGenerator } from '@/testing/id-generator';
@@ -78,10 +79,25 @@ describe('AgentPanel', () => {
     );
     expect(app.sessionReader.getState().playback.positionSeconds).toBe(0);
   });
+
+  it('shows planner failures and re-enables the plan control', async () => {
+    const { app, container } = renderAgentPanel({
+      createAgentPlanner: createRejectingPlanner,
+    });
+
+    await requestPlan(container, 'preview');
+
+    expect(getText(container, 'agent-error')).toBe(
+      'Agent planner failed to create a command plan.'
+    );
+    expect(app.sessionReader.getState().playback.positionSeconds).toBe(0);
+    expect(getButton(container, 'agent-request-plan').disabled).toBe(false);
+  });
 });
 
 function renderAgentPanel(input: {
-  scripts: ConstructorParameters<typeof ScriptedAgentPlanner>[0]['scripts'];
+  createAgentPlanner?: () => IAgentPlanner;
+  scripts?: ConstructorParameters<typeof ScriptedAgentPlanner>[0]['scripts'];
 }): {
   app: IAppHandle;
   container: HTMLElement;
@@ -97,7 +113,10 @@ function renderAgentPanel(input: {
   act(() => {
     root?.render(
       <AppProvider
-        createAgentPlanner={() => new ScriptedAgentPlanner(input)}
+        createAgentPlanner={
+          input.createAgentPlanner ??
+          (() => new ScriptedAgentPlanner({ scripts: input.scripts ?? {} }))
+        }
         createAppHandle={() => app}
       >
         <AgentPanel />
@@ -106,6 +125,14 @@ function renderAgentPanel(input: {
   });
 
   return { app, container };
+}
+
+function createRejectingPlanner(): IAgentPlanner {
+  return {
+    async createPlan() {
+      throw new Error('provider unavailable');
+    },
+  };
 }
 
 async function requestPlan(
@@ -178,6 +205,16 @@ function getText(container: HTMLElement, testId: string): string {
   }
 
   return element.textContent ?? '';
+}
+
+function getButton(container: HTMLElement, testId: string): HTMLButtonElement {
+  const element = queryByTestId(container, testId);
+
+  if (!(element instanceof HTMLButtonElement)) {
+    throw new Error(`Could not find button with test id "${testId}".`);
+  }
+
+  return element;
 }
 
 function getTexts(container: HTMLElement, testId: string): string[] {

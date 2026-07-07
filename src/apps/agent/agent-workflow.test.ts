@@ -5,7 +5,7 @@ import type { AppCommand, CommandResult } from '@/controllers';
 import { createCallRecorder } from '@/testing/call-recorder';
 import { createTestIdGenerator } from '@/testing/id-generator';
 import { AgentAuditLog } from './agent-audit-log';
-import { AgentWorkflow } from './agent-workflow';
+import { AgentWorkflow, type IAgentPlanner } from './agent-workflow';
 import { ScriptedAgentPlanner } from './scripted-agent-planner';
 
 describe('AgentWorkflow', () => {
@@ -49,6 +49,31 @@ describe('AgentWorkflow', () => {
         ],
       },
     });
+    expect(executor.commands).toEqual([]);
+  });
+
+  it('returns a planning failure when the planner rejects', async () => {
+    const executor = createRecordingExecutor();
+    const workflow = createWorkflow({
+      commandExecutor: executor,
+      planner: createRejectingPlanner(),
+    });
+
+    const result = await workflow.requestPlan({ requestText: 'preview' });
+
+    expect(result).toMatchObject({
+      errors: [
+        {
+          code: 'AGENT_PLANNER_FAILED',
+          message: 'Agent planner failed to create a command plan.',
+        },
+      ],
+      ok: false,
+    });
+    expect(result.auditEntries.map((entry) => entry.event)).toEqual([
+      'plan_requested',
+      'plan_failed',
+    ]);
     expect(executor.commands).toEqual([]);
   });
 
@@ -305,6 +330,14 @@ function createAuditLog(): AgentAuditLog {
     createId: () => `audit-${(auditId += 1)}`,
     now: () => auditId,
   });
+}
+
+function createRejectingPlanner(): IAgentPlanner {
+  return {
+    async createPlan() {
+      throw new Error('provider unavailable');
+    },
+  };
 }
 
 function createRecordingExecutor(input: { failCommandType?: string } = {}) {
