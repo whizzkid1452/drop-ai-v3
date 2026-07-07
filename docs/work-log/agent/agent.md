@@ -777,3 +777,76 @@ Promise로 전파될 수 있었다.
 3. planner 실패를 command validation 실패나 execution 실패로 부르지 않고 planning failure로 분리했다.
 4. workflow test로 command가 실행되지 않는다는 조건을 먼저 고정했다.
 5. UI test로 실패 후 pending state가 풀리는 조건을 고정했다.
+
+## 9. HTTP Agent Planner Adapter 추가
+
+### 작업내용
+
+- 외부 planner endpoint를 호출하는 provider-agnostic HTTP adapter를 추가했다.
+- adapter는 `IAgentPlanner`를 구현하고, command 실행 권한은 갖지 않는다.
+- 브랜치:
+  - `feature/http-agent-planner-adapter`
+- 주요 파일:
+  - `src/apps/agent/planner-adapters/http-agent-planner.ts`
+  - `src/apps/agent/planner-adapters/http-agent-planner.test.ts`
+
+### 문제
+
+`AgentWorkflow`는 `IAgentPlanner` boundary를 통해 planner를 교체할 수 있었지만, 실제 provider 또는 server-side
+planner endpoint를 호출하는 adapter가 없었다. 이 상태에서는 scripted planner를 벗어나도 workflow semantics가
+유지되는지 검증하기 어려웠다.
+
+### 원인/배경
+
+- Browser bundle이 private provider API key를 직접 가져서는 안 된다.
+- Phase 1 provider input은 `requestText`, `sessionSummary`, `commandCatalog`로 제한해야 한다.
+- `asset.register`처럼 `File`이 필요한 command는 provider가 직접 payload를 만들 수 없다.
+- 외부 endpoint는 HTTP failure, invalid JSON, response shape mismatch, timeout을 반환할 수 있다.
+
+### 해결
+
+- `HttpAgentPlanner`를 추가했다.
+- `createPlan()`은 endpoint에 JSON body를 `POST`하고, response의 `steps` field를 `AgentPlanDraft`로 반환한다.
+- `AbortController`로 단일 request timeout을 적용했다.
+- non-2xx response, invalid JSON, `steps` 누락을 rejected Promise로 변환했다.
+- `requiresUserAttachment` command definition은 metadata는 보내되 examples를 비워 raw `File`이 request body에
+  들어가지 않도록 했다.
+
+### 결과
+
+- provider 종류와 무관하게 HTTP endpoint를 `IAgentPlanner`로 연결할 수 있는 adapter가 생겼다.
+- adapter는 command를 실행하지 않고 draft만 반환한다.
+- 실패는 workflow의 planning failure 처리 경계로 전달될 수 있다.
+- 검증 결과:
+  - `pnpm test -- src/apps/agent/planner-adapters/http-agent-planner.test.ts` -> 1 file / 6 tests passed
+  - `pnpm typecheck`
+  - `pnpm lint`
+  - `pnpm test` -> 41 files / 294 tests passed
+  - `pnpm build`
+
+### 선택의 근거
+
+- provider-specific SDK를 바로 붙이지 않은 이유:
+  - provider 선택이 아직 확정되지 않았다.
+  - browser가 private key를 보관하지 않는 server-side endpoint 구조를 먼저 열어두는 편이 안전하다.
+- response validation을 `steps` 존재 여부까지만 확인한 이유:
+  - adapter는 transport boundary다.
+  - command shape 검증은 기존 `validateAgentPlanDraft()`와 `commandSchema.safeParse()`가 담당한다.
+
+### 트레이드오프
+
+- 장점:
+  - provider 교체가 `IAgentPlanner` adapter 범위로 제한된다.
+  - HTTP failure와 timeout을 workflow의 planning failure 경계로 보낼 수 있다.
+  - raw `File` example이 provider request body에 포함되지 않는다.
+- 비용:
+  - server-side planner endpoint는 아직 구현하지 않는다.
+  - endpoint request/response schema는 아직 별도 versioned contract로 분리하지 않았다.
+
+### 사고의 흐름
+
+1. 첫 PR에서 planner failure를 recoverable result로 변환하는 경계를 먼저 만들었다.
+2. 그 경계 위에 HTTP adapter만 얹으면 provider failure가 workflow로 전파되는 구조가 단순해진다고 판단했다.
+3. adapter 책임을 network transport와 response envelope 확인으로 제한했다.
+4. command validation은 중복 구현하지 않고 기존 plan validator에 맡겼다.
+5. timeout은 deduplication이나 debounce가 아니라 단일 request 최대 대기 시간 제한으로 구현했다.
