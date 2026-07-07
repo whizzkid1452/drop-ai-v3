@@ -1,7 +1,5 @@
 # 규칙
 
-이 프로젝트의 목표는 command-first 구조 자체를 검증하는 것이 아니라, 브라우저에서 실제로 작동하는 lightweight DAW를 만드는 것이다. command-first는 UI, CLI, agent, plugin 같은 입력 경로가 같은 편집 코어를 공유하게 하기 위한 내부 설계 원칙이다.
-
 1. `audio-engine`은 `controllers`와 `composition`에서만 접근 가능하다.
 2. 쓰기 가능한 `session` store는 `controllers`와 `composition`에서만 접근 가능하다.
 3. `apps`는 `controllers`와 `composition`만 사용한다.
