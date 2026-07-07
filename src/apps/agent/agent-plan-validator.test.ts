@@ -84,6 +84,8 @@ describe('validateAgentPlanDraft', () => {
       errors: [
         {
           code: 'INVALID_AGENT_COMMAND',
+          message:
+            'Agent plan step 1 contains an invalid command (command type "unknown.command": type: unsupported command type).',
           stepIndex: 0,
         },
       ],
@@ -115,6 +117,8 @@ describe('validateAgentPlanDraft', () => {
       errors: [
         {
           code: 'INVALID_AGENT_COMMAND',
+          message:
+            'Agent plan step 1 contains an invalid command (command type "session.exportRange.start.set": payload.seconds: Too small: expected number to be >=0).',
           stepIndex: 0,
         },
       ],

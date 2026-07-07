@@ -5,6 +5,56 @@ import { createAgentPlannerCommandDefinitions } from './agent-planner-command-de
 const DEFAULT_WEBLLM_MODEL_ID = 'Llama-3.2-1B-Instruct-q4f16_1-MLC';
 const DEFAULT_MAX_TOKENS = 1_000;
 const DEFAULT_TEMPERATURE = 0;
+const RESPONSE_SCHEMA_OBJECT_TYPE = 'object';
+const COMMAND_SELECTION_RULES = [
+  'First match requestText intent to commandCatalog. Do not default to playback.play.',
+  'Use playback.play only when the user explicitly asks to start, resume, or play from the current position.',
+  'For pause or stop requests, use playback.pause or playback.stop instead of playback.play.',
+  'For time navigation requests, use playback.seek with payload.seconds.',
+  'For export range preview requests, set session.exportRange.start.set, set session.exportRange.end.set, then use session.exportRange.preview.play.',
+  'For range WAV download requests, set range boundaries when the user gives them, then use session.exportRange.export.',
+  'For full-session WAV download requests, use session.export.',
+  'For track, region, volume, pan, mute, solo, fade, BPM, or loop requests, use the matching non-play command from commandCatalog.',
+  'If no commandCatalog entry matches the request, return {"steps":[]}.',
+] as const;
+const COMMAND_SELECTION_EXAMPLES = [
+  {
+    commandTypes: ['playback.play'],
+    requestText: '재생해줘',
+  },
+  {
+    commandTypes: ['playback.pause'],
+    requestText: '잠깐 멈춰줘',
+  },
+  {
+    commandTypes: ['playback.stop'],
+    requestText: '정지하고 처음으로 돌아가',
+  },
+  {
+    commandTypes: ['playback.seek'],
+    requestText: '10초 위치로 이동해줘',
+  },
+  {
+    commandTypes: [
+      'session.exportRange.start.set',
+      'session.exportRange.end.set',
+      'session.exportRange.preview.play',
+    ],
+    requestText: '1초부터 3초까지 미리 들어볼래',
+  },
+  {
+    commandTypes: [
+      'session.exportRange.start.set',
+      'session.exportRange.end.set',
+      'session.exportRange.export',
+    ],
+    requestText: '1초부터 3초까지 wav로 내보내줘',
+  },
+  {
+    commandTypes: ['session.export'],
+    requestText: '전체 세션을 wav로 다운로드해줘',
+  },
+] as const;
 
 export interface WebLLMInitProgressReport {
   progress: number;
@@ -46,7 +96,7 @@ export interface WebLLMPlannerEngine {
 export interface WebLLMChatCompletionRequest {
   messages: WebLLMChatCompletionMessage[];
   max_tokens: number;
-  response_format: { type: 'json_object' };
+  response_format: { type: 'json_object'; schema: string };
   temperature: number;
 }
 
@@ -68,7 +118,15 @@ export interface WebLLMChatCompletionChoice {
 interface WebLLMPlannerPromptPayload {
   requestText: string;
   sessionSummary: AgentPlanningInput['sessionSummary'];
+  availableCommandTypes: string[];
   commandCatalog: ReturnType<typeof createAgentPlannerCommandDefinitions>;
+  intentExamples: readonly CommandSelectionExample[];
+  commandSelectionRules: readonly string[];
+}
+
+interface CommandSelectionExample {
+  requestText: string;
+  commandTypes: readonly string[];
 }
 
 export class WebLLMAgentPlanner implements IAgentPlanner {
@@ -98,7 +156,10 @@ export class WebLLMAgentPlanner implements IAgentPlanner {
     const completion = await engine.chat.completions.create({
       max_tokens: this.maxTokens,
       messages: createWebLLMMessages(input),
-      response_format: { type: 'json_object' },
+      response_format: {
+        schema: createAgentPlanDraftResponseSchema(input),
+        type: 'json_object',
+      },
       temperature: this.temperature,
     });
     const content = completion.choices[0]?.message.content;
@@ -107,7 +168,7 @@ export class WebLLMAgentPlanner implements IAgentPlanner {
       throw new Error('WebLLM planner response must include message content.');
     }
 
-    return parsePlanDraftContent(content);
+    return parsePlanDraftContent(content, input.commandCatalog);
   }
 
   async preload(): Promise<void> {
@@ -151,10 +212,20 @@ function createWebLLMMessages(
 function createSystemPrompt(): string {
   return [
     'You convert a Drop AI user request into an AgentPlanDraft JSON object.',
-    'Return only valid JSON with this shape: {"steps":[{"id":"step-1","reason":"...","command":{"type":"...","payload":{}}}]}',
+    'Return only valid JSON with this shape: {"steps":[{"id":"step-1","reason":"...","command":{"type":"..."}}]} or {"steps":[]}.',
+    'Put reason only on the step object. Do not put reason inside command.',
     'Use only commandCatalog entries whose availability is "agent".',
+    'availableCommandTypes contains the complete list of command types you may return.',
+    'Set command.type to one exact commandCatalog type string. Do not translate, rename, abbreviate, or invent command types.',
+    'Use payload keys exactly as shown in payloadDescription and examples.',
+    'Include command.payload only when payloadDescription is not "No payload.".',
+    'Never choose playback.play as a fallback for unclear, export, edit, range, stop, pause, seek, or setup requests.',
     'Do not create File, Blob, or object URL payloads.',
     'Do not execute commands. Only propose command steps for user approval.',
+    'Command selection rules:',
+    ...COMMAND_SELECTION_RULES.map((rule) => `- ${rule}`),
+    'Korean intent examples:',
+    ...COMMAND_SELECTION_EXAMPLES.map(formatCommandSelectionExample),
   ].join('\n');
 }
 
@@ -162,13 +233,81 @@ function createPromptPayload(
   input: AgentPlanningInput
 ): WebLLMPlannerPromptPayload {
   return {
+    availableCommandTypes: createAvailableAgentCommandTypes(input),
     commandCatalog: createAgentPlannerCommandDefinitions(input.commandCatalog),
+    intentExamples: COMMAND_SELECTION_EXAMPLES,
+    commandSelectionRules: COMMAND_SELECTION_RULES,
     requestText: input.requestText,
     sessionSummary: input.sessionSummary,
   };
 }
 
-function parsePlanDraftContent(content: string): AgentPlanDraft {
+function formatCommandSelectionExample(
+  example: CommandSelectionExample
+): string {
+  return `- ${example.requestText} -> ${example.commandTypes.join(', ')}`;
+}
+
+function createAgentPlanDraftResponseSchema(input: AgentPlanningInput): string {
+  return JSON.stringify({
+    additionalProperties: false,
+    properties: {
+      steps: {
+        items: {
+          additionalProperties: false,
+          properties: {
+            command: {
+              additionalProperties: false,
+              properties: {
+                payload: {
+                  additionalProperties: true,
+                  type: RESPONSE_SCHEMA_OBJECT_TYPE,
+                },
+                type: createCommandTypeResponseSchema(input),
+              },
+              required: ['type'],
+              type: RESPONSE_SCHEMA_OBJECT_TYPE,
+            },
+            id: { type: 'string' },
+            reason: { type: 'string' },
+          },
+          required: ['id', 'reason', 'command'],
+          type: RESPONSE_SCHEMA_OBJECT_TYPE,
+        },
+        type: 'array',
+      },
+    },
+    required: ['steps'],
+    type: RESPONSE_SCHEMA_OBJECT_TYPE,
+  });
+}
+
+function createCommandTypeResponseSchema(input: AgentPlanningInput): {
+  enum?: string[];
+  type: 'string';
+} {
+  const agentCommandTypes = createAvailableAgentCommandTypes(input);
+
+  if (agentCommandTypes.length === 0) {
+    return { type: 'string' };
+  }
+
+  return {
+    enum: agentCommandTypes,
+    type: 'string',
+  };
+}
+
+function createAvailableAgentCommandTypes(input: AgentPlanningInput): string[] {
+  return input.commandCatalog
+    .filter((definition) => definition.availability === 'agent')
+    .map((definition) => definition.type);
+}
+
+function parsePlanDraftContent(
+  content: string,
+  commandCatalog: AgentPlanningInput['commandCatalog']
+): AgentPlanDraft {
   let value: unknown;
 
   try {
@@ -181,7 +320,12 @@ function parsePlanDraftContent(content: string): AgentPlanDraft {
     throw new Error('WebLLM planner response must include a steps field.');
   }
 
-  return { steps: value.steps };
+  return {
+    steps: normalizePlanDraftSteps({
+      commandCatalog,
+      steps: value.steps,
+    }),
+  };
 }
 
 async function createDefaultWebLLMEngine({
@@ -195,4 +339,91 @@ async function createDefaultWebLLMEngine({
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizePlanDraftSteps({
+  commandCatalog,
+  steps,
+}: {
+  commandCatalog: AgentPlanningInput['commandCatalog'];
+  steps: unknown;
+}): unknown {
+  if (!Array.isArray(steps)) {
+    return steps;
+  }
+
+  const noPayloadCommandTypes = createNoPayloadCommandTypeSet(commandCatalog);
+
+  return steps.map((step) =>
+    normalizePlanDraftStep({ noPayloadCommandTypes, step })
+  );
+}
+
+function createNoPayloadCommandTypeSet(
+  commandCatalog: AgentPlanningInput['commandCatalog']
+): ReadonlySet<string> {
+  return new Set(
+    commandCatalog
+      .filter((definition) => definition.payloadDescription === 'No payload.')
+      .map((definition) => definition.type)
+  );
+}
+
+function normalizePlanDraftStep({
+  noPayloadCommandTypes,
+  step,
+}: {
+  noPayloadCommandTypes: ReadonlySet<string>;
+  step: unknown;
+}): unknown {
+  if (!isRecord(step) || !isRecord(step.command)) {
+    return step;
+  }
+
+  const normalizedCommand = normalizePlanDraftCommand({
+    command: step.command,
+    noPayloadCommandTypes,
+  });
+  const normalizedStep: Record<string, unknown> = {
+    ...step,
+    command: normalizedCommand,
+  };
+  const commandReason = step.command.reason;
+
+  if (
+    !('reason' in normalizedStep) &&
+    typeof commandReason === 'string' &&
+    commandReason.length > 0
+  ) {
+    normalizedStep.reason = commandReason;
+  }
+
+  return normalizedStep;
+}
+
+function normalizePlanDraftCommand({
+  command,
+  noPayloadCommandTypes,
+}: {
+  command: Record<string, unknown>;
+  noPayloadCommandTypes: ReadonlySet<string>;
+}): Record<string, unknown> {
+  const normalizedCommand = { ...command };
+  const commandType = normalizedCommand.type;
+
+  delete normalizedCommand.reason;
+
+  if (
+    typeof commandType === 'string' &&
+    noPayloadCommandTypes.has(commandType) &&
+    isEmptyRecord(normalizedCommand.payload)
+  ) {
+    delete normalizedCommand.payload;
+  }
+
+  return normalizedCommand;
+}
+
+function isEmptyRecord(value: unknown): value is Record<string, never> {
+  return isRecord(value) && Object.keys(value).length === 0;
 }

@@ -58,14 +58,109 @@ describe('WebLLMAgentPlanner', () => {
       response_format: { type: 'json_object' },
       temperature: 0,
     });
+    expect(typeof completionRequest.response_format.schema).toBe('string');
+    const responseSchema = JSON.parse(completionRequest.response_format.schema);
+
+    expect(responseSchema).toMatchObject({
+      properties: {
+        steps: {
+          type: 'array',
+        },
+      },
+      required: ['steps'],
+      type: 'object',
+    });
+    expect(responseSchema.properties.steps).not.toHaveProperty('minItems');
+    expect(
+      responseSchema.properties.steps.items.properties.command
+        .additionalProperties
+    ).toBe(false);
+    expect(
+      responseSchema.properties.steps.items.properties.command.properties
+        .payload
+    ).toMatchObject({
+      additionalProperties: true,
+      type: 'object',
+    });
+    expect(
+      responseSchema.properties.steps.items.properties.command.properties.type
+        .enum
+    ).toContain('playback.play');
+    expect(
+      responseSchema.properties.steps.items.properties.command.properties.type
+        .enum
+    ).toContain('session.exportRange.start.set');
+    expect(
+      responseSchema.properties.steps.items.properties.command.properties.type
+        .enum
+    ).not.toContain('asset.register');
     expect(completionRequest.messages[0]).toMatchObject({
       role: 'system',
     });
+    const systemPrompt = completionRequest.messages[0]?.content ?? '';
+
+    expect(systemPrompt).toContain('Command selection rules:');
+    expect(systemPrompt).toContain('Never choose playback.play as a fallback');
+    expect(systemPrompt).toContain('Korean intent examples:');
+    expect(systemPrompt).toContain(
+      '1초부터 3초까지 미리 들어볼래 -> session.exportRange.start.set, session.exportRange.end.set, session.exportRange.preview.play'
+    );
     expect(getPromptPayload(completionRequest)).toMatchObject({
+      availableCommandTypes: expect.arrayContaining([
+        'playback.play',
+        'playback.pause',
+        'session.exportRange.start.set',
+        'session.exportRange.export',
+      ]),
+      commandSelectionRules: expect.arrayContaining([
+        'If no commandCatalog entry matches the request, return {"steps":[]}.',
+      ]),
+      intentExamples: expect.arrayContaining([
+        {
+          commandTypes: [
+            'session.exportRange.start.set',
+            'session.exportRange.end.set',
+            'session.exportRange.preview.play',
+          ],
+          requestText: '1초부터 3초까지 미리 들어볼래',
+        },
+      ]),
       requestText: 'play',
       sessionSummary: {
         sessionId: 'session-1',
       },
+    });
+  });
+
+  it('normalizes WebLLM command formatting noise before validation', async () => {
+    const engine = createEngineReturning(
+      JSON.stringify({
+        steps: [
+          {
+            command: {
+              payload: {},
+              reason: 'Start playback.',
+              type: 'playback.play',
+            },
+            id: 'step-1',
+          },
+        ],
+      })
+    );
+    const planner = new WebLLMAgentPlanner({
+      engineFactory: createEngineFactory(engine),
+    });
+
+    const draft = await planner.createPlan(createPlanningInput());
+
+    expect(draft).toEqual({
+      steps: [
+        {
+          command: { type: 'playback.play' },
+          id: 'step-1',
+          reason: 'Start playback.',
+        },
+      ],
     });
   });
 

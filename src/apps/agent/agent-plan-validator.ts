@@ -5,6 +5,8 @@ import type {
   AgentPlanDraft,
 } from './agent-plan';
 
+const MAX_VALIDATION_ISSUES_TO_SUMMARIZE = 2;
+
 export type AgentPlanValidationErrorCode =
   | 'INVALID_AGENT_PLAN'
   | 'INVALID_AGENT_PLAN_STEP'
@@ -173,7 +175,11 @@ function validateAgentPlanStep(
       error: {
         cause: commandResult.error.issues,
         code: 'INVALID_AGENT_COMMAND',
-        message: `Agent plan step ${stepIndex + 1} contains an invalid command.`,
+        message: createInvalidCommandMessage({
+          command: step.command,
+          issues: commandResult.error.issues,
+          stepIndex,
+        }),
         stepIndex,
       },
       ok: false,
@@ -192,4 +198,77 @@ function validateAgentPlanStep(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function createInvalidCommandMessage({
+  command,
+  issues,
+  stepIndex,
+}: {
+  command: unknown;
+  issues: readonly ValidationIssueSummary[];
+  stepIndex: number;
+}): string {
+  const commandType = getCommandTypeSummary(command);
+  const issueSummary = summarizeValidationIssues(issues);
+
+  return `Agent plan step ${stepIndex + 1} contains an invalid command (${commandType}: ${issueSummary}).`;
+}
+
+function getCommandTypeSummary(command: unknown): string {
+  if (!isRecord(command)) {
+    return 'command is not an object';
+  }
+
+  const commandType = command.type;
+
+  if (typeof commandType !== 'string' || commandType.length === 0) {
+    return 'missing command type';
+  }
+
+  return `command type "${commandType}"`;
+}
+
+interface ValidationIssueSummary {
+  code: string;
+  message: string;
+  path: readonly unknown[];
+}
+
+function summarizeValidationIssues(
+  issues: readonly ValidationIssueSummary[]
+): string {
+  if (issues.length === 0) {
+    return 'no validation issue details were provided';
+  }
+
+  const summaries = issues
+    .slice(0, MAX_VALIDATION_ISSUES_TO_SUMMARIZE)
+    .map(formatValidationIssue);
+
+  if (issues.length <= MAX_VALIDATION_ISSUES_TO_SUMMARIZE) {
+    return summaries.join('; ');
+  }
+
+  return `${summaries.join('; ')}; and ${issues.length - MAX_VALIDATION_ISSUES_TO_SUMMARIZE} more issue(s)`;
+}
+
+function formatValidationIssue(issue: ValidationIssueSummary): string {
+  if (isCommandTypeIssue(issue)) {
+    return 'type: unsupported command type';
+  }
+
+  return `${formatIssuePath(issue.path)}: ${issue.message}`;
+}
+
+function isCommandTypeIssue(issue: ValidationIssueSummary): boolean {
+  return issue.path.length === 1 && issue.path[0] === 'type';
+}
+
+function formatIssuePath(path: readonly unknown[]): string {
+  if (path.length === 0) {
+    return 'command';
+  }
+
+  return path.map(String).join('.');
 }
