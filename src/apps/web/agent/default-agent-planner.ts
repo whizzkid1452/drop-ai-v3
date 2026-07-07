@@ -4,7 +4,10 @@ import type {
   IAgentPlanner,
 } from '@/apps/agent/agent-workflow';
 import { HttpAgentPlanner } from '@/apps/agent/planner-adapters/http-agent-planner';
-import { WebLLMAgentPlanner } from '@/apps/agent/planner-adapters/webllm-agent-planner';
+import {
+  WebLLMAgentPlanner,
+  type WebLLMInitProgressCallback,
+} from '@/apps/agent/planner-adapters/webllm-agent-planner';
 import { ScriptedAgentPlanner } from '@/apps/agent/scripted-agent-planner';
 
 type AgentPlannerProvider = 'http' | 'scripted' | 'webllm';
@@ -17,6 +20,7 @@ interface AgentPlannerEnvironment {
 
 export interface CreateDefaultAgentPlannerInput {
   environment?: AgentPlannerEnvironment;
+  webLLMInitProgressCallback?: WebLLMInitProgressCallback;
 }
 
 const DEFAULT_AGENT_PLAN_SCRIPTS: Record<string, AgentPlanDraft> = {
@@ -144,6 +148,7 @@ const DEFAULT_AGENT_PLAN_SCRIPTS: Record<string, AgentPlanDraft> = {
 
 export function createDefaultAgentPlanner({
   environment = import.meta.env,
+  webLLMInitProgressCallback,
 }: CreateDefaultAgentPlannerInput = {}): IAgentPlanner {
   const provider = parseAgentPlannerProvider(
     environment.VITE_AGENT_PLANNER_PROVIDER
@@ -155,7 +160,10 @@ export function createDefaultAgentPlanner({
     case 'scripted':
       return createScriptedAgentPlanner();
     case 'webllm':
-      return createWebLLMAgentPlanner(environment);
+      return createWebLLMAgentPlanner({
+        environment,
+        webLLMInitProgressCallback,
+      });
   }
 }
 
@@ -181,12 +189,19 @@ function createHttpAgentPlanner(
   return new HttpAgentPlanner({ endpoint });
 }
 
-function createWebLLMAgentPlanner(
-  environment: AgentPlannerEnvironment
-): IAgentPlanner {
+function createWebLLMAgentPlanner({
+  environment,
+  webLLMInitProgressCallback,
+}: {
+  environment: AgentPlannerEnvironment;
+  webLLMInitProgressCallback: CreateDefaultAgentPlannerInput['webLLMInitProgressCallback'];
+}): IAgentPlanner {
   const modelId = trimEnvironmentValue(environment.VITE_AGENT_WEBLLM_MODEL_ID);
 
-  return new WebLLMAgentPlanner(modelId ? { modelId } : {});
+  return new WebLLMAgentPlanner({
+    ...(modelId ? { modelId } : {}),
+    initProgressCallback: webLLMInitProgressCallback,
+  });
 }
 
 function parseAgentPlannerProvider(

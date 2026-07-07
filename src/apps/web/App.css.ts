@@ -386,6 +386,44 @@ export const agentTextarea = style({
   },
 });
 
+export const agentPlannerProgress = style({
+  display: 'grid',
+  gap: vars.space.sm,
+});
+
+export const agentPlannerProgressHeader = style({
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: vars.space.md,
+  color: vars.color.textMuted,
+  fontFamily: vars.font.mono,
+  fontSize: 12,
+});
+
+export const agentPlannerProgressTrack = style({
+  overflow: 'hidden',
+  height: 8,
+  borderRadius: 999,
+  background: vars.color.panelRaised,
+});
+
+export const agentPlannerProgressFill = style({
+  display: 'block',
+  height: '100%',
+  borderRadius: 999,
+  background: vars.color.accent,
+  transition: 'width 160ms ease',
+});
+
+export const agentPlannerProgressMessage = style({
+  margin: 0,
+  color: vars.color.textMuted,
+  fontFamily: vars.font.mono,
+  fontSize: 12,
+  lineHeight: 1.4,
+});
+
 export const agentStepList = style({
   display: 'grid',
   gap: vars.space.sm,

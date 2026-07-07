@@ -5,13 +5,20 @@ import type {
 } from '@/apps/agent/agent-workflow';
 import type { AgentCommandPlan } from '@/apps/agent/agent-plan';
 import type { CommandResult, SessionExportResult } from '@/controllers';
-import { useAgentWorkflow } from '../AppProvider';
+import {
+  useAgentPlannerProgress,
+  useAgentWorkflow,
+  useClearAgentPlannerProgress,
+  type AgentPlannerProgress,
+} from '../AppProvider';
 import * as styles from '../App.css';
 
 type AgentPendingAction = 'request' | 'approve' | 'reject';
 
 export function AgentPanel() {
   const agentWorkflow = useAgentWorkflow();
+  const agentPlannerProgress = useAgentPlannerProgress();
+  const clearAgentPlannerProgress = useClearAgentPlannerProgress();
   const [requestText, setRequestText] = useState('');
   const [plan, setPlan] = useState<AgentCommandPlan | null>(null);
   const [pendingAction, setPendingAction] = useState<AgentPendingAction | null>(
@@ -31,6 +38,10 @@ export function AgentPanel() {
     setErrorMessage(null);
     setExecutionMessage(null);
     setPlan(null);
+
+    if (agentPlannerProgress?.status !== 'loading') {
+      clearAgentPlannerProgress();
+    }
 
     try {
       const result = await agentWorkflow.requestPlan({
@@ -102,6 +113,7 @@ export function AgentPanel() {
   }
 
   const hasDraftPlan = plan?.status === 'draft';
+  const shouldShowPlannerProgress = agentPlannerProgress !== null;
 
   return (
     <section className={styles.agentPanel} aria-label="Agent command planner">
@@ -141,6 +153,9 @@ export function AgentPanel() {
           Plan
         </button>
       </form>
+      {shouldShowPlannerProgress ? (
+        <AgentPlannerProgressView progress={agentPlannerProgress} />
+      ) : null}
       {plan ? <AgentPlanPreview plan={plan} /> : null}
       {hasDraftPlan ? (
         <div className={styles.agentActionRow}>
@@ -179,6 +194,60 @@ export function AgentPanel() {
       ) : null}
     </section>
   );
+}
+
+function AgentPlannerProgressView({
+  progress,
+}: {
+  progress: AgentPlannerProgress;
+}) {
+  return (
+    <div
+      className={styles.agentPlannerProgress}
+      data-testid="agent-planner-progress"
+    >
+      <div className={styles.agentPlannerProgressHeader}>
+        <span data-testid="agent-planner-progress-status">
+          {formatAgentPlannerProgressStatus(progress.status)}
+        </span>
+        <span data-testid="agent-planner-progress-percent">
+          {progress.progressPercent}%
+        </span>
+      </div>
+      <div
+        aria-label="Model loading progress"
+        aria-valuemax={100}
+        aria-valuemin={0}
+        aria-valuenow={progress.progressPercent}
+        className={styles.agentPlannerProgressTrack}
+        role="progressbar"
+      >
+        <span
+          className={styles.agentPlannerProgressFill}
+          style={{ width: `${progress.progressPercent}%` }}
+        />
+      </div>
+      <p
+        className={styles.agentPlannerProgressMessage}
+        data-testid="agent-planner-progress-message"
+      >
+        {progress.message}
+      </p>
+    </div>
+  );
+}
+
+function formatAgentPlannerProgressStatus(
+  status: AgentPlannerProgress['status']
+): string {
+  switch (status) {
+    case 'failed':
+      return 'Model load failed';
+    case 'loading':
+      return 'Model loading';
+    case 'ready':
+      return 'Model ready';
+  }
 }
 
 function AgentPlanPreview({ plan }: { plan: AgentCommandPlan }) {

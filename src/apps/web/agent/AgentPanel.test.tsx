@@ -3,10 +3,12 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ScriptedAgentPlanner } from '@/apps/agent/scripted-agent-planner';
 import type { IAgentPlanner } from '@/apps/agent/agent-workflow';
+import type { AgentPlanDraft } from '@/apps/agent/agent-plan';
 import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
 import { createApp, type IAppHandle } from '@/composition/create-app';
 import { createTestIdGenerator } from '@/testing/id-generator';
 import { AppProvider } from '../AppProvider';
+import type { CreateDefaultAgentPlannerInput } from './default-agent-planner';
 import { AgentPanel } from './AgentPanel';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -93,10 +95,105 @@ describe('AgentPanel', () => {
     expect(app.sessionReader.getState().playback.positionSeconds).toBe(0);
     expect(getButton(container, 'agent-request-plan').disabled).toBe(false);
   });
+
+  it('shows WebLLM model loading progress while planning is pending', async () => {
+    const deferredPlan = createDeferred<AgentPlanDraft>();
+    const { container } = renderAgentPanel({
+      createAgentPlanner: ({ webLLMInitProgressCallback }) => ({
+        async createPlan() {
+          webLLMInitProgressCallback?.({
+            progress: 0.42,
+            text: 'Loading model shards.',
+            timeElapsed: 1,
+          });
+
+          return await deferredPlan.promise;
+        },
+      }),
+    });
+
+    await requestPlan(container, 'play');
+
+    expect(getText(container, 'agent-planner-progress-percent')).toBe('42%');
+    expect(getText(container, 'agent-planner-progress-message')).toBe(
+      'Loading model shards.'
+    );
+
+    await act(async () => {
+      deferredPlan.resolve({
+        steps: [
+          {
+            command: { type: 'playback.play' },
+            id: 'step-1',
+            reason: 'Start playback.',
+          },
+        ],
+      });
+      await flushMicrotasks();
+    });
+
+    expect(getText(container, 'agent-plan-status')).toBe('Draft plan');
+  });
+
+  it('starts WebLLM model preload on mount and shows progress before a request', async () => {
+    const deferredPreload = createDeferred<void>();
+    let didStartPreload = false;
+    const { container } = renderAgentPanel({
+      createAgentPlanner: ({ webLLMInitProgressCallback }) => ({
+        async createPlan() {
+          return {
+            steps: [
+              {
+                command: { type: 'playback.play' },
+                id: 'step-1',
+                reason: 'Start playback.',
+              },
+            ],
+          };
+        },
+        async preload() {
+          didStartPreload = true;
+          webLLMInitProgressCallback?.({
+            progress: 0.3,
+            text: 'Downloading model.',
+            timeElapsed: 1,
+          });
+
+          await deferredPreload.promise;
+        },
+      }),
+    });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(didStartPreload).toBe(true);
+    expect(getText(container, 'agent-planner-progress-status')).toBe(
+      'Model loading'
+    );
+    expect(getText(container, 'agent-planner-progress-percent')).toBe('30%');
+    expect(getText(container, 'agent-planner-progress-message')).toBe(
+      'Downloading model.'
+    );
+
+    await act(async () => {
+      deferredPreload.resolve(undefined);
+      await flushMicrotasks();
+    });
+
+    expect(getText(container, 'agent-planner-progress-status')).toBe(
+      'Model ready'
+    );
+    expect(getText(container, 'agent-planner-progress-percent')).toBe('100%');
+    expect(getText(container, 'agent-planner-progress-message')).toBe(
+      'Model ready.'
+    );
+  });
 });
 
 function renderAgentPanel(input: {
-  createAgentPlanner?: () => IAgentPlanner;
+  createAgentPlanner?: (input: CreateDefaultAgentPlannerInput) => IAgentPlanner;
   scripts?: ConstructorParameters<typeof ScriptedAgentPlanner>[0]['scripts'];
 }): {
   app: IAppHandle;
@@ -131,6 +228,27 @@ function createRejectingPlanner(): IAgentPlanner {
   return {
     async createPlan() {
       throw new Error('provider unavailable');
+    },
+  };
+}
+
+function createDeferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+} {
+  let resolve: ((value: T) => void) | null = null;
+  const promise = new Promise<T>((innerResolve) => {
+    resolve = innerResolve;
+  });
+
+  return {
+    promise,
+    resolve(value) {
+      if (!resolve) {
+        throw new Error('Deferred promise resolver is not ready.');
+      }
+
+      resolve(value);
     },
   };
 }

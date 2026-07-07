@@ -110,13 +110,26 @@ export class WebLLMAgentPlanner implements IAgentPlanner {
     return parsePlanDraftContent(content);
   }
 
+  async preload(): Promise<void> {
+    await this.getEngine();
+  }
+
   private async getEngine(): Promise<WebLLMPlannerEngine> {
-    this.enginePromise ??= this.engineFactory({
+    this.enginePromise ??= this.createEngine();
+
+    try {
+      return await this.enginePromise;
+    } catch (error) {
+      this.enginePromise = null;
+      throw error;
+    }
+  }
+
+  private async createEngine(): Promise<WebLLMPlannerEngine> {
+    return await this.engineFactory({
       initProgressCallback: this.initProgressCallback,
       modelId: this.modelId,
     });
-
-    return await this.enginePromise;
   }
 }
 

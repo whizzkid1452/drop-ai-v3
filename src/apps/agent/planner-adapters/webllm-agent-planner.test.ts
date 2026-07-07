@@ -90,6 +90,34 @@ describe('WebLLMAgentPlanner', () => {
     expect(engine.chat.completions.create).toHaveBeenCalledTimes(2);
   });
 
+  it('preloads the engine and reuses it for planning', async () => {
+    const engine = createEngineReturning(
+      JSON.stringify({
+        steps: [
+          {
+            command: { type: 'playback.play' },
+            id: 'step-1',
+            reason: 'Start playback.',
+          },
+        ],
+      })
+    );
+    const engineFactory = createEngineFactory(engine);
+    const planner = new WebLLMAgentPlanner({ engineFactory });
+
+    await planner.preload();
+    const draft = await planner.createPlan(createPlanningInput());
+
+    expect(engineFactory).toHaveBeenCalledTimes(1);
+    expect(draft.steps).toEqual([
+      {
+        command: { type: 'playback.play' },
+        id: 'step-1',
+        reason: 'Start playback.',
+      },
+    ]);
+  });
+
   it('does not send attachment command examples to WebLLM', async () => {
     const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
     const engine = createEngineReturning(JSON.stringify({ steps: [] }));
