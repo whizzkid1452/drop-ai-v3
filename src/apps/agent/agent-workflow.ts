@@ -55,9 +55,18 @@ export type RequestAgentPlanResult =
     }
   | {
       ok: false;
-      errors: AgentPlanValidationError[];
+      errors: RequestAgentPlanError[];
       auditEntries: AgentAuditEntry[];
     };
+
+export type RequestAgentPlanError =
+  | AgentPlanValidationError
+  | AgentPlannerFailure;
+
+export interface AgentPlannerFailure {
+  code: 'AGENT_PLANNER_FAILED';
+  message: string;
+}
 
 export interface RejectAgentPlanInput {
   plan: AgentCommandPlan;
@@ -122,13 +131,22 @@ export class AgentWorkflow {
       planId,
     });
 
-    const draft = await this.planner.createPlan({
-      commandCatalog: agentCommandCatalog,
+    const draftResult = await this.requestDraftPlan({
+      planId,
       requestText,
       sessionSummary,
     });
+
+    if (!draftResult.ok) {
+      return {
+        auditEntries: this.auditLog.getEntries(),
+        errors: [draftResult.error],
+        ok: false,
+      };
+    }
+
     const validationResult = validateAgentPlanDraft({
-      draft,
+      draft: draftResult.draft,
       planId,
       requestText,
       revision: 1,
@@ -275,6 +293,42 @@ export class AgentWorkflow {
       plan: updatePlanStatus(plan, 'completed'),
       results,
     };
+  }
+
+  private async requestDraftPlan({
+    planId,
+    requestText,
+    sessionSummary,
+  }: {
+    planId: string;
+    requestText: string;
+    sessionSummary: AgentSessionSummary;
+  }): Promise<
+    | { ok: true; draft: AgentPlanDraft }
+    | { ok: false; error: AgentPlannerFailure }
+  > {
+    try {
+      const draft = await this.planner.createPlan({
+        commandCatalog: agentCommandCatalog,
+        requestText,
+        sessionSummary,
+      });
+
+      return { draft, ok: true };
+    } catch {
+      const error: AgentPlannerFailure = {
+        code: 'AGENT_PLANNER_FAILED',
+        message: 'Agent planner failed to create a command plan.',
+      };
+
+      this.auditLog.record({
+        details: error,
+        event: 'plan_failed',
+        planId,
+      });
+
+      return { error, ok: false };
+    }
   }
 }
 

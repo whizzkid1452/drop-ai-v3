@@ -703,3 +703,77 @@ Workflow와 provider 연결은 있었지만 사용자가 Web 화면에서 자연
 3. approve success 이후 export command result만 download 대상으로 좁혔다.
 4. UI test는 성공 path와 invalid plan path를 우선 고정했다.
 5. Provider 연결 커밋과 분리해 화면 노출 변경만 별도 커밋으로 기록했다.
+
+## 8. Planner request failure 처리
+
+### 작업내용
+
+- Planner가 throw 또는 rejected Promise를 반환해도 `AgentWorkflow.requestPlan()`이 실패 result를 반환하도록
+  변경했다.
+- `AgentPanel`의 plan 요청 흐름에 `try/finally`를 추가해 실패 후 pending state가 해제되도록 했다.
+- Phase 1 다음 구현 순서를 별도 work-log 문서로 기록했다.
+- 브랜치:
+  - `bug/agent-planner-failure-handling`
+- 주요 파일:
+  - `src/apps/agent/agent-workflow.ts`
+  - `src/apps/agent/agent-workflow.test.ts`
+  - `src/apps/web/agent/AgentPanel.tsx`
+  - `src/apps/web/agent/AgentPanel.test.tsx`
+  - `docs/work-log/agent/phase-1-next-implementation-plan.md`
+
+### 문제
+
+`AgentWorkflow.requestPlan()`은 planner가 정상적으로 `AgentPlanDraft`를 반환하는 경우와 invalid draft를 반환하는
+경우는 처리했지만, planner 호출 자체가 실패하는 경우를 `RequestAgentPlanResult`로 변환하지 않았다. 이 상태에서
+외부 planner adapter를 붙이면 provider timeout, network error, invalid response parse error가 UI까지 rejected
+Promise로 전파될 수 있었다.
+
+### 원인/배경
+
+- 현재 기본 planner는 scripted planner라서 provider failure가 일반 경로로 드러나지 않았다.
+- 외부 planner adapter는 command 실행 전 단계에서 실패할 수 있다.
+- 이 실패는 command payload가 잘못된 **plan validation failure**와 다르다.
+- 이 실패는 승인된 command가 `ok: false`를 반환하는 **execution failure**와도 다르다.
+
+### 해결
+
+- `RequestAgentPlanResult`의 실패 variant가 `RequestAgentPlanError[]`를 반환하도록 확장했다.
+- planner 호출 실패를 `AGENT_PLANNER_FAILED` code와 사용자-facing message로 변환했다.
+- planner 실패 시 audit log에 `plan_failed` event를 기록했다.
+- `AgentPanel.requestPlan()`에서 예외가 발생해도 pending state를 해제하도록 했다.
+- planner 실패 시 command가 실행되지 않는 workflow test를 추가했다.
+- planner 실패 후 UI가 error message를 표시하고 plan button을 다시 활성화하는 component test를 추가했다.
+
+### 결과
+
+- planner 호출 실패는 session state를 변경하지 않는다.
+- planner 호출 실패와 plan validation failure를 타입상 구분할 수 있다.
+- UI는 planner 실패 후 다시 plan 요청을 받을 수 있다.
+- 검증 결과:
+  - `pnpm test -- src/apps/agent/agent-workflow.test.ts src/apps/web/agent/AgentPanel.test.tsx` -> 2 files / 10 tests passed
+
+### 선택의 근거
+
+- provider error object를 그대로 message로 쓰지 않은 이유:
+  - provider 내부 error는 인증, endpoint, raw response 같은 세부 정보를 포함할 수 있다.
+  - 사용자에게 필요한 정보는 "plan 생성 실패"와 재시도 가능 여부다.
+- `plan_failed` event를 재사용한 이유:
+  - 현재 audit event union에 planning failure 전용 event가 없다.
+  - 이번 변경의 목적은 실패 경계 복구이고, audit taxonomy 확장은 별도 목적이 될 수 있다.
+
+### 트레이드오프
+
+- 장점:
+  - 외부 planner adapter를 붙이기 전에 recoverable failure boundary가 생긴다.
+  - validation failure와 execution failure를 구분할 수 있다.
+- 비용:
+  - provider별 상세 원인은 사용자-facing error에 노출하지 않는다.
+  - planning failure 전용 audit event를 추가하지 않아 audit 분석에서는 `details.code`를 함께 봐야 한다.
+
+### 사고의 흐름
+
+1. `docs/spec.md`의 Phase 1 목표와 현재 코드의 gap을 비교했다.
+2. 실제 자연어 planner adapter가 들어오기 전 필요한 실패 경계를 먼저 정리해야 한다고 판단했다.
+3. planner 실패를 command validation 실패나 execution 실패로 부르지 않고 planning failure로 분리했다.
+4. workflow test로 command가 실행되지 않는다는 조건을 먼저 고정했다.
+5. UI test로 실패 후 pending state가 풀리는 조건을 고정했다.

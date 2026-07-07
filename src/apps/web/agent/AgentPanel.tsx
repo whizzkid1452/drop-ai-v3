@@ -32,12 +32,17 @@ export function AgentPanel() {
     setExecutionMessage(null);
     setPlan(null);
 
-    const result = await agentWorkflow.requestPlan({
-      requestText: normalizedRequestText,
-    });
+    try {
+      const result = await agentWorkflow.requestPlan({
+        requestText: normalizedRequestText,
+      });
 
-    setPendingAction(null);
-    applyPlanRequestResult(result);
+      applyPlanRequestResult(result);
+    } catch {
+      setErrorMessage('Agent planner failed to create a command plan.');
+    } finally {
+      setPendingAction(null);
+    }
   }
 
   function rejectPlan(): void {
