@@ -1,9 +1,9 @@
-import type {
-  AgentCommandDefinition,
-  AgentCommandAvailability,
-} from '../agent-command-catalog';
 import type { AgentPlanDraft } from '../agent-plan';
 import type { AgentPlanningInput, IAgentPlanner } from '../agent-workflow';
+import {
+  createAgentPlannerCommandDefinitions,
+  type AgentPlannerCommandDefinition,
+} from './agent-planner-command-definition';
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 
@@ -24,14 +24,7 @@ export interface HttpAgentPlannerRequestBody {
   commandCatalog: HttpAgentPlannerCommandDefinition[];
 }
 
-export interface HttpAgentPlannerCommandDefinition {
-  type: string;
-  title: string;
-  description: string;
-  payloadDescription: string;
-  availability: AgentCommandAvailability;
-  examples: unknown[];
-}
+export type HttpAgentPlannerCommandDefinition = AgentPlannerCommandDefinition;
 
 export class HttpAgentPlanner implements IAgentPlanner {
   private readonly endpoint: string;
@@ -87,23 +80,9 @@ function createRequestBody(
   input: AgentPlanningInput
 ): HttpAgentPlannerRequestBody {
   return {
-    commandCatalog: input.commandCatalog.map(toHttpCommandDefinition),
+    commandCatalog: createAgentPlannerCommandDefinitions(input.commandCatalog),
     requestText: input.requestText,
     sessionSummary: input.sessionSummary,
-  };
-}
-
-function toHttpCommandDefinition(
-  definition: AgentCommandDefinition
-): HttpAgentPlannerCommandDefinition {
-  return {
-    availability: definition.availability,
-    description: definition.description,
-    examples:
-      definition.availability === 'agent' ? [...definition.examples] : [],
-    payloadDescription: definition.payloadDescription,
-    title: definition.title,
-    type: definition.type,
   };
 }
 
