@@ -3,7 +3,21 @@ import type {
   AgentPlanningInput,
   IAgentPlanner,
 } from '@/apps/agent/agent-workflow';
+import { HttpAgentPlanner } from '@/apps/agent/planner-adapters/http-agent-planner';
+import { WebLLMAgentPlanner } from '@/apps/agent/planner-adapters/webllm-agent-planner';
 import { ScriptedAgentPlanner } from '@/apps/agent/scripted-agent-planner';
+
+type AgentPlannerProvider = 'http' | 'scripted' | 'webllm';
+
+interface AgentPlannerEnvironment {
+  VITE_AGENT_PLANNER_ENDPOINT?: string;
+  VITE_AGENT_PLANNER_PROVIDER?: string;
+  VITE_AGENT_WEBLLM_MODEL_ID?: string;
+}
+
+export interface CreateDefaultAgentPlannerInput {
+  environment?: AgentPlannerEnvironment;
+}
 
 const DEFAULT_AGENT_PLAN_SCRIPTS: Record<string, AgentPlanDraft> = {
   'export range': {
@@ -128,10 +142,75 @@ const DEFAULT_AGENT_PLAN_SCRIPTS: Record<string, AgentPlanDraft> = {
   },
 };
 
-export function createDefaultAgentPlanner(): IAgentPlanner {
+export function createDefaultAgentPlanner({
+  environment = import.meta.env,
+}: CreateDefaultAgentPlannerInput = {}): IAgentPlanner {
+  const provider = parseAgentPlannerProvider(
+    environment.VITE_AGENT_PLANNER_PROVIDER
+  );
+
+  switch (provider) {
+    case 'http':
+      return createHttpAgentPlanner(environment);
+    case 'scripted':
+      return createScriptedAgentPlanner();
+    case 'webllm':
+      return createWebLLMAgentPlanner(environment);
+  }
+}
+
+function createScriptedAgentPlanner(): IAgentPlanner {
   return new NormalizedScriptedAgentPlanner({
     scripts: DEFAULT_AGENT_PLAN_SCRIPTS,
   });
+}
+
+function createHttpAgentPlanner(
+  environment: AgentPlannerEnvironment
+): IAgentPlanner {
+  const endpoint = trimEnvironmentValue(
+    environment.VITE_AGENT_PLANNER_ENDPOINT
+  );
+
+  if (!endpoint) {
+    throw new Error(
+      'VITE_AGENT_PLANNER_ENDPOINT is required when VITE_AGENT_PLANNER_PROVIDER is "http".'
+    );
+  }
+
+  return new HttpAgentPlanner({ endpoint });
+}
+
+function createWebLLMAgentPlanner(
+  environment: AgentPlannerEnvironment
+): IAgentPlanner {
+  const modelId = trimEnvironmentValue(environment.VITE_AGENT_WEBLLM_MODEL_ID);
+
+  return new WebLLMAgentPlanner(modelId ? { modelId } : {});
+}
+
+function parseAgentPlannerProvider(
+  value: string | undefined
+): AgentPlannerProvider {
+  const normalizedValue = trimEnvironmentValue(value).toLowerCase();
+
+  if (!normalizedValue) {
+    return 'scripted';
+  }
+
+  if (
+    normalizedValue === 'http' ||
+    normalizedValue === 'scripted' ||
+    normalizedValue === 'webllm'
+  ) {
+    return normalizedValue;
+  }
+
+  throw new Error(`Unsupported agent planner provider: ${normalizedValue}.`);
+}
+
+function trimEnvironmentValue(value: string | undefined): string {
+  return value?.trim() ?? '';
 }
 
 class NormalizedScriptedAgentPlanner implements IAgentPlanner {
