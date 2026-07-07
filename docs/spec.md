@@ -13,6 +13,121 @@
 - 한 phase는 PR 단위가 아니다. 한 phase 안에서도 기능은 사용자 가치와 리스크에 따라 여러 PR로 쪼갠다.
 - MVP 완료 기준은 Phase 1 종료 시점이다. Phase 0은 MVP가 아니라 AI agent가 사용할 command 실행 경계를 준비하는 단계다.
 
+## 목표 아키텍처
+
+이 다이어그램은 전체 phase의 기능이 들어간 뒤의 목표 구조를 나타낸다. 현재 구현 상태가 아니라, SSOT를 유지하며
+Web UI, CLI, keyboard shortcut, AI agent, script, remote API를 같은 편집 코어로 확장하기 위한 기준 구조다.
+
+여기서 SSOT는 모든 상태를 하나의 store에 넣는다는 뜻이 아니다. 상태의 수명과 정합성 규칙에 따라 authoritative
+owner를 하나씩 정한다는 뜻이다.
+
+```mermaid
+flowchart LR
+    subgraph Inputs["Input surfaces"]
+        WebUI["Web UI"]
+        CLI["CLI"]
+        Shortcut["Keyboard shortcut"]
+        Agent["AI agent"]
+        Script["Script / macro"]
+        RemoteAPI["Remote command API"]
+    end
+
+    subgraph CommandBoundary["Command execution boundary"]
+        CommandGateway["CommandGateway\nAppCommand validation"]
+        CommandQueue["CommandQueue\nqueued sequential execution"]
+        CommandController["CommandController\ncommand dispatch"]
+    end
+
+    subgraph Domain["Domain command handlers"]
+        ProjectCommands["Project commands\ntracks / regions / MIDI / automation"]
+        AssetCommands["Asset commands\nregister / analyze / restore"]
+        ExportCommands["Export commands\nrange / full / stem / archive"]
+        RuntimeCommands["Runtime commands\nplayback / recording / preview"]
+    end
+
+    subgraph Stores["Authoritative state owners"]
+        ProjectStore["ProjectStore\nproject graph SSOT"]
+        AssetBlobRepository["AssetBlobRepository\nasset binary SSOT"]
+        CommandHistoryStore["CommandHistoryStore\nundo / redo SSOT"]
+        ExportJobStore["ExportJobStore\nexport job status SSOT"]
+        WorkspaceUiStore["WorkspaceUiStore\nview-only UI state SSOT"]
+    end
+
+    subgraph Runtime["Runtime projections"]
+        AudioRuntimeSync["AudioRuntimeSync\nProjectState to audio runtime"]
+        AudioEngine["IAudioEngine\nplayback / offline render"]
+        ProcessorRuntime["ProcessorRuntime\nprocessor nodes"]
+        RecorderRuntime["RecorderRuntime\nrecording session"]
+        TransportClock["TransportClock\nreal-time playback position"]
+    end
+
+    subgraph Persistence["Persistence and caches"]
+        ProjectRepository["ProjectRepository\nproject snapshot"]
+        AnalysisCache["AnalysisCache\nwaveform / loudness / spectral"]
+        PresetRepository["PresetRepository\nshortcut / processor / export presets"]
+    end
+
+    subgraph ReadModels["Read models"]
+        ProjectReadModel["ProjectReadModel"]
+        TimelineViewModel["TimelineViewModel"]
+        AgentSessionSummary["AgentSessionSummary"]
+        ExportViewModel["ExportViewModel"]
+    end
+
+    WebUI --> CommandGateway
+    CLI --> CommandGateway
+    Shortcut --> CommandGateway
+    Agent --> CommandGateway
+    Script --> CommandGateway
+    RemoteAPI --> CommandGateway
+
+    CommandGateway --> CommandQueue --> CommandController
+
+    CommandController --> ProjectCommands
+    CommandController --> AssetCommands
+    CommandController --> ExportCommands
+    CommandController --> RuntimeCommands
+
+    ProjectCommands --> ProjectStore
+    ProjectCommands --> CommandHistoryStore
+    AssetCommands --> ProjectStore
+    AssetCommands --> AssetBlobRepository
+    AssetCommands --> AnalysisCache
+    ExportCommands --> ExportJobStore
+    ExportCommands --> ProjectStore
+    ExportCommands --> AssetBlobRepository
+    RuntimeCommands --> ProjectStore
+    RuntimeCommands --> TransportClock
+    RuntimeCommands --> RecorderRuntime
+
+    ProjectStore --> AudioRuntimeSync
+    AudioRuntimeSync --> AudioEngine
+    AudioRuntimeSync --> ProcessorRuntime
+
+    ProjectStore --> ProjectRepository
+    AssetBlobRepository --> ProjectRepository
+    PresetRepository --> ProjectRepository
+
+    ProjectStore --> ProjectReadModel
+    ProjectStore --> TimelineViewModel
+    ProjectStore --> AgentSessionSummary
+    ExportJobStore --> ExportViewModel
+    WorkspaceUiStore --> TimelineViewModel
+    TransportClock --> TimelineViewModel
+```
+
+SSOT 기준은 다음과 같다.
+
+- 편집 가능한 project graph의 원본은 `ProjectStore`다.
+- asset binary의 원본은 `AssetBlobRepository`다. `ProjectStore`는 asset metadata와 blob reference만 가진다.
+- decoded buffer, WebAudio node, processor node는 runtime projection이다. 편집 상태의 원본으로 사용하지 않는다.
+- playback 중 고빈도 위치 값은 `TransportClock`이 갖고, seek/stop처럼 사용자가 확정한 위치 변경만 command로
+  `ProjectStore`에 반영한다.
+- waveform, loudness, spectral analysis 결과는 `AnalysisCache`가 갖고, asset hash와 algorithm version으로
+  무효화한다.
+- undo/redo는 agent audit log가 아니라 `CommandHistoryStore`가 책임진다.
+- zoom, scroll, selected panel, hover state처럼 편집 결과가 아닌 화면 상태는 `WorkspaceUiStore`가 책임진다.
+
 ## Phase 0. CLI command 기반 구축
 
 AI agent를 붙이기 전에 CLI에서 command 실행 경계를 검증한다. 여기서 CLI는 문자열 입력을 command로 parse하고 `AppController.executeCommand()`로 실행하는 조작 surface를 뜻한다.
