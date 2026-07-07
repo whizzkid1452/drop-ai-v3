@@ -1,0 +1,79 @@
+# Work Log
+
+## 2026-07-06
+
+### 완료한 작업
+
+- Phase 1 agent architecture plan 문서를 추가했다.
+  - 커밋: `9802af1 docs: add phase 1 agent architecture plan`
+  - 범위: 목표 아키텍처, 레이어 규칙, 모듈 구조, PR 계획, 테스트 계획, 완료 기준.
+- Agent command catalog와 session summary factory를 추가했다.
+  - 커밋: `8eb841b feat(agent): add command catalog and session summary`
+  - 범위: `src/apps/agent/agent-command-catalog.ts`, `src/apps/agent/agent-session-summary.ts`, 관련 테스트.
+
+### 검증한 내용
+
+- `agentCommandCatalog`의 agent-available command 예시는 `commandSchema` 검증을 통과한다.
+- `asset.register`는 `File` 객체가 필요하므로 `requiresUserAttachment`로 분류했다.
+- `createAgentSessionSummary`는 track, region, playback, export range를 JSON-compatible 객체로 요약한다.
+- `apps/agent`가 `session` layer를 직접 import하지 않도록 summary input을 구조적 타입으로 정의했다.
+- 전체 검증 결과:
+  - `./node_modules/.bin/tsc -b`
+  - `./node_modules/.bin/eslint .`
+  - `./node_modules/.bin/vitest run` -> 35 files / 268 tests passed
+
+### 다음 진행 범위
+
+- Phase 1 PR 2 범위로 `AgentPlanValidator`와 `AgentAuditLog`를 구현한다.
+- 먼저 테스트를 추가한 뒤 구현한다.
+- Validation은 command payload의 schema-level 검증을 담당한다.
+- Audit log는 undo/redo history가 아니라 agent workflow event 기록으로 둔다.
+
+### 추가 완료한 작업
+
+- Phase 1 PR 2 범위의 plan validation과 audit log 기반 구현을 추가했다.
+  - 커밋: `41101af feat(agent): add plan validation and audit log`
+  - 범위: `agent-plan.ts`, `agent-plan-validator.ts`, `agent-audit-log.ts`, 관련 테스트.
+  - `validateAgentPlanDraft`는 planner draft의 command 후보를 `commandSchema.safeParse()`로 검증한다.
+  - `validateAgentPlanExecutionReadiness`는 draft 상태와 session summary fingerprint를 확인한다.
+  - `AgentAuditLog`는 append-only workflow event 기록을 제공한다.
+  - `summarizeCommandResultForAudit`는 export result의 `Blob` 자체 대신 filename과 size만 기록한다.
+  - 실패 result는 `cause`를 저장하지 않고 error code와 message만 기록한다.
+
+### 추가 검증한 내용
+
+- Red 단계에서 구현 파일 부재로 테스트 실패를 확인했다.
+- 구현 후 신규 테스트 7개가 통과했다.
+- 전체 검증 결과:
+  - `./node_modules/.bin/tsc -b`
+  - `./node_modules/.bin/eslint .`
+  - `./node_modules/.bin/vitest run` -> 37 files / 275 tests passed
+
+### 브랜치 작업
+
+- 원격 `origin/main`이 이미 agent architecture, catalog/summary, plan validation/audit log 커밋을 포함하고 있음을
+  확인했다.
+- 새 브랜치 `feature/phase-1-agent-workflow`를 만들고 AgentWorkflow core 작업을 진행했다.
+- AgentWorkflow core와 테스트용 ScriptedAgentPlanner를 추가했다.
+  - 커밋: `b4cf9b3 feat(agent): add workflow core`
+  - 범위: `agent-workflow.ts`, `scripted-agent-planner.ts`, `agent-session-summary.ts` fingerprint helper, 관련 테스트.
+  - `requestPlan`은 draft plan 생성만 수행하고 command를 실행하지 않는다.
+  - `rejectPlan`은 plan을 rejected 상태로 바꾸고 command를 실행하지 않는다.
+  - `approvePlan`은 stale plan을 차단하고, 승인된 command를 순서대로 실행한다.
+  - 첫 번째 command 실패 이후 command는 실행하지 않는다.
+  - in-memory app integration path에서 `AppController.executeCommand()`를 통한 seek/play 실행을 확인했다.
+
+### 브랜치 작업 검증
+
+- `./node_modules/.bin/tsc -b`
+- `./node_modules/.bin/eslint .`
+- `./node_modules/.bin/vitest run` -> 39 files / 283 tests passed
+
+### PR 생성 상태
+
+- `feature/phase-1-agent-workflow` 브랜치를 원격에 push했다.
+- PR 대상은 `main`, head branch는 `feature/phase-1-agent-workflow`다.
+- GitHub connector의 PR 생성 요청은 403 `Resource not accessible by integration`으로 실패했다.
+- 현재 환경에는 `gh`와 `hub` CLI가 없어 CLI fallback으로 PR을 생성할 수 없다.
+- GitHub가 제공한 PR 생성 URL:
+  - `https://github.com/whizzkid1452/drop-ai-v3/pull/new/feature/phase-1-agent-workflow`

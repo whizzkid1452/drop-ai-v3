@@ -1,0 +1,36 @@
+# Work Log
+
+## 2026-07-07
+
+### 완료한 작업
+
+- `feature/phase-1-agent-workflow` 브랜치에서 AgentWorkflow core를 구현했다.
+  - 커밋: `b4cf9b3 feat(agent): add workflow core`
+  - 원격 브랜치: `origin/feature/phase-1-agent-workflow`
+- Draft PR을 생성했다.
+  - PR: https://github.com/whizzkid1452/drop-ai-v3/pull/1
+  - base: `main`
+  - head: `feature/phase-1-agent-workflow`
+  - 상태: draft
+
+### 구현 범위
+
+- `AgentWorkflow`를 추가했다.
+  - `requestPlan`은 planner draft를 검증 가능한 command plan으로 만들고 command를 실행하지 않는다.
+  - `rejectPlan`은 plan을 rejected 상태로 바꾸고 command를 실행하지 않는다.
+  - `approvePlan`은 session summary fingerprint를 확인한 뒤 승인된 command만 순서대로 실행한다.
+  - command 하나가 실패하면 이후 command는 실행하지 않는다.
+- `ScriptedAgentPlanner`를 추가했다.
+  - network 없이 AgentWorkflow core를 테스트하기 위한 deterministic planner다.
+- `createAgentSessionSummaryFingerprint` helper를 추가했다.
+
+### 검증
+
+- `./node_modules/.bin/tsc -b`
+- `./node_modules/.bin/eslint .`
+- `./node_modules/.bin/vitest run` -> 39 files / 283 tests passed
+
+### 현재 로컬 상태
+
+- `.gitignore` 수정은 PR 범위에 포함하지 않았다.
+- `docs/phase-1-agent-architecture.md` 삭제는 로컬 미커밋 변경으로 남아 있으며 PR 범위에 포함하지 않았다.
