@@ -889,7 +889,7 @@ JSON-compatible `AgentPlanDraft`를 생성하는 실행 경로를 뜻한다. com
 - `WebLLMAgentPlanner`는 `IAgentPlanner`를 구현한다.
 - WebLLM engine 생성은 `engineFactory`로 주입할 수 있어 단위 테스트에서 실제 모델을 로드하지 않는다.
 - 기본 engine factory는 `CreateMLCEngine(modelId, { initProgressCallback })`를 동적 import로 호출한다.
-- WebLLM chat completion 요청은 `response_format: { type: 'json_object' }`, `temperature: 0`, `max_tokens: 1000`을 사용한다.
+- WebLLM chat completion 요청은 `response_format: { type: 'json_object', schema: string }`, `temperature: 0`, `max_tokens: 1000`을 사용한다.
 - planner prompt input은 `requestText`, `sessionSummary`, command catalog로 제한한다.
 - `requiresUserAttachment` command는 metadata만 전달하고 examples는 비워 `File` payload가 모델 입력에 들어가지 않도록 했다.
 - `createDefaultAgentPlanner()`는 설정이 없으면 기존 scripted planner를 유지한다.
@@ -953,3 +953,194 @@ JSON-compatible `AgentPlanDraft`를 생성하는 실행 경로를 뜻한다. com
 3. WebLLM SDK를 직접 UI에 붙이지 않고 `IAgentPlanner` adapter로 감싸 교체 범위를 제한했다.
 4. 실제 모델 로딩은 비용이 크고 환경 의존적이므로, 단위 테스트에서는 engine factory를 주입해 adapter contract만 검증했다.
 5. Web path provider selection은 composition 책임이므로 `createDefaultAgentPlanner()`에 env 기반 분기를 추가했다.
+
+## 11. WebLLM 모델 Preload와 로딩 Progress UI 추가
+
+### 작업내용
+
+- WebLLM provider가 선택되면 page entry 시점에 모델 preload를 시작하게 했다.
+- WebLLM 모델 초기화 진행률을 `AgentPanel`에 progressbar로 표시했다.
+- `AppProvider`가 WebLLM init progress callback을 planner factory에 전달하고, callback report를 React state로 보관한다.
+- `AgentPanel`은 preload 또는 planning 중 전달된 progress percent와 WebLLM status text를 표시한다.
+- request 시작 시 loading 중인 progress는 유지하고, 완료/실패 상태만 지워 stale progress가 다시 보이지 않게 했다.
+- 주요 파일:
+  - `src/apps/agent/planner-adapters/webllm-agent-planner.ts`
+  - `src/apps/web/AppProvider.tsx`
+  - `src/apps/web/agent/default-agent-planner.ts`
+  - `src/apps/web/agent/AgentPanel.tsx`
+  - `src/apps/web/App.css.ts`
+  - `src/apps/web/agent/AgentPanel.test.tsx`
+  - `docs/spec.md`
+
+### 사실
+
+- WebLLM의 `initProgressCallback` report는 `progress`, `text`, `timeElapsed`를 제공한다.
+- `WebLLMAgentPlanner.preload()`는 `CreateMLCEngine()` 경계를 먼저 실행하고, 이후 `createPlan()`에서 같은 engine promise를 재사용한다.
+- `AppProvider`는 planner가 `preload()` method를 제공할 때만 preload를 호출한다.
+- WebLLM `response_format.type`을 `json_object`로 쓸 때는 `schema`를 문자열로 함께 전달한다. `@mlc-ai/web-llm@0.2.84`는 schema가 없으면 `undefined`를 `compileJSONSchema()`에 넘겨 `BindingError: Cannot pass non-string to std::string`을 발생시킬 수 있다.
+- 현재 UI는 `progress`를 0-1 범위로 clamp한 뒤 percent로 표시한다.
+- progressbar는 `role="progressbar"`와 `aria-valuenow`를 가진다.
+- loading progress는 preload 또는 plan request 중 callback report가 있을 때 표시된다.
+- 실제 모델 load는 단위 테스트에서 실행하지 않는다. 테스트는 fake planner가 callback을 호출하는 방식으로 UI 상태를 검증한다.
+
+### 불확실성
+
+- 실제 WebLLM 모델이 브라우저별로 어떤 `text` 값을 얼마나 자주 보내는지는 모델과 WebLLM runtime 상태에 의존한다.
+- progress가 100%가 된 뒤 completion 생성까지 걸리는 시간은 별도 generation latency이며, 이 UI는 모델 초기화 progress만 표시한다.
+- 모델 preload 실패 후 plan 요청은 같은 `WebLLMAgentPlanner`의 engine loading을 다시 시도할 수 있다.
+
+### 검증 결과
+
+- `pnpm typecheck`
+- `pnpm test -- src/apps/web/agent/AgentPanel.test.tsx src/apps/web/AppProvider.test.tsx src/apps/web/agent/default-agent-planner.test.ts src/apps/agent/planner-adapters/webllm-agent-planner.test.ts`
+
+## 12. WebLLM invalid command plan 메시지와 command type 제약 보강
+
+### 작업내용
+
+- WebLLM structured output schema의 `command.type`을 agent 사용 가능 command catalog literal enum으로 제한했다.
+- WebLLM structured output schema에서 `command` 객체의 허용 key를 `type`, `payload`로 제한했다.
+- WebLLM adapter가 no-payload command의 빈 `payload`와 command 객체 안에 잘못 들어간 `reason`을 validation 전에
+  정리하게 했다.
+- WebLLM system prompt에 command type과 payload key를 catalog에 맞춰 그대로 사용하라는 규칙을 추가했다.
+- `validateAgentPlanDraft()`가 invalid command failure를 반환할 때 실패한 command type과 validation issue path를
+  message에 포함하게 했다.
+- `docs/spec.md`의 Phase 1 WebLLM 연결 항목과 plan validation failure 표시 항목을 갱신했다.
+
+### 문제
+
+WebLLM plan 요청이 실패할 때 UI에 `Agent plan step 1 contains an invalid command.`만 표시됐다. 이 메시지는
+planner 응답이 JSON parse와 `steps` 존재 검사는 통과했지만, step command가 `commandSchema` 검증을 통과하지
+못했다는 사실만 알려준다. 실패한 command type이나 payload field를 알 수 없어 사용자가 요청을 바꿔야 하는지,
+planner 제약이 부족한지 구분하기 어려웠다.
+
+### 사실
+
+- `AgentWorkflow`는 planner draft를 preview에 표시하기 전에 `validateAgentPlanDraft()`를 호출한다.
+- `validateAgentPlanDraft()`는 각 step command를 기존 `commandSchema.safeParse()`로 검증한다.
+- 기존 WebLLM response schema는 `command.type`을 단순 string으로만 제한했다.
+- WebLLM이 `playback.play` command 안에 빈 `payload`와 `reason`을 넣으면, command type은 맞아도 strict
+  `playback.play` command schema가 extra key를 거부한다.
+- 기존 `AgentPanel`은 plan validation failure의 `message`만 표시했다.
+- `commandSchema`가 반환한 Zod issue에는 실패 path와 message가 포함된다.
+
+### 추론
+
+- 현재 증상은 WebLLM이 최소 1개 step을 포함한 JSON 응답을 반환했음을 시사한다.
+- `command.type`이 catalog literal과 다르거나 payload key/value가 command schema와 맞지 않는 경우가 모두 이
+  증상과 일치한다.
+- `Agent plan step 1 contains an invalid command (command type "playback.play": command: Unrecognized keys:
+"payload", "reason").`는 WebLLM이 command type은 맞게 골랐지만 command object shape을 `commandSchema`보다
+  넓게 만든 경우와 일치한다.
+- WebLLM output schema에서 command type literal enum을 제공하면 catalog에 없는 command type 생성 가능성을
+  줄일 수 있다. payload domain constraint는 계속 `commandSchema`가 최종 검증한다.
+
+### 해결
+
+- `createAgentPlanDraftResponseSchema()`를 추가해 planning input의 command catalog에서 `availability === "agent"`인
+  command type만 enum으로 넣었다.
+- `requiresUserAttachment` command인 `asset.register`는 WebLLM command type enum에 포함하지 않는다.
+- system prompt에 다음 규칙을 추가했다.
+  - `command.type`은 catalog의 type string과 정확히 일치해야 한다.
+  - payload key는 `payloadDescription`과 examples의 key를 그대로 사용해야 한다.
+  - payload가 없는 command는 `command.payload`를 생략해야 한다.
+- WebLLM response schema의 `command.additionalProperties`를 `false`로 설정해 command 내부 `reason` 같은 extra key를
+  grammar 수준에서 차단했다.
+- adapter normalization은 다음 provider-formatting noise만 정리한다.
+  - `command.reason`은 제거하고, step `reason`이 없으면 step `reason`으로 올린다.
+  - payload가 없는 command의 빈 `payload: {}`는 제거한다.
+- normalization 이후에도 `validateAgentPlanDraft()`가 기존 `commandSchema`로 최종 command shape을 검증한다.
+- invalid command 메시지는 다음 정보를 포함한다.
+  - 실패 step 번호.
+  - 실패한 command type 또는 command type 누락.
+  - 첫 validation issue path와 message.
+  - command type literal mismatch는 긴 literal 목록 대신 `type: unsupported command type`으로 표시한다.
+
+### 결과
+
+- catalog에 없는 command type을 모델이 선택하는 경로는 WebLLM structured output schema 수준에서 먼저 제한된다.
+- `playback.play` 같은 no-payload command에 빈 `payload`가 붙어서 validation failure가 나는 경로는 adapter에서
+  정리된다.
+- payload가 틀린 경우 UI에는 예를 들어 `payload.seconds` 같은 실패 경로가 표시된다.
+- 검증 결과:
+  - `pnpm typecheck`
+  - `pnpm lint`
+  - `pnpm test -- src/apps/agent/agent-plan-validator.test.ts src/apps/agent/planner-adapters/webllm-agent-planner.test.ts`
+
+### 불확실성
+
+- WebLLM runtime이 schema enum을 사용하더라도 모델이 항상 제품적으로 올바른 command sequence를 고른다고 보장할
+  수는 없다.
+- payload 숫자 범위, 존재하는 track/region id, export range 관계 같은 도메인 제약은 structured output schema가
+  아니라 기존 command validation과 command execution 단계에서 계속 확인한다.
+
+## 13. WebLLM command selection prompt와 empty plan schema 보강
+
+### 작업내용
+
+- WebLLM prompt payload에 agent가 사용할 수 있는 전체 command type 목록인 `availableCommandTypes`를 추가했다.
+- WebLLM prompt payload에 command 선택 규칙인 `commandSelectionRules`를 추가했다.
+- WebLLM prompt payload에 한국어 요청과 command type sequence를 연결하는 `intentExamples`를 추가했다.
+- system prompt에 `playback.play`를 fallback으로 고르지 말라는 규칙을 추가했다.
+- system prompt에 command selection rule과 한국어 intent 예시를 직접 포함했다.
+- WebLLM response schema에서 `steps.minItems = 1` 제약을 제거했다.
+
+### 문제
+
+WebLLM이 다양한 요청에 대해 `playback.play`만 제안하면, 실제로 존재하는 command 종류를 planner가 제품적으로
+활용하지 못한다. catalog에는 여러 command가 있지만, 모델이 요청을 command에 매칭하지 못할 때 non-empty plan을
+강제하면 모델이 임의의 command를 고를 수 있다.
+
+### 사실
+
+- `agentCommandCatalog`에는 `playback.play`만 있는 것이 아니라 pause, stop, seek, export range, session export,
+  track, region 관련 command가 포함되어 있다.
+- 기존 WebLLM prompt payload에는 `commandCatalog`가 포함되어 있었다.
+- 기존 WebLLM response schema는 `steps.minItems = 1`이었다.
+- `validateAgentPlanDraft()`는 empty `steps`를 plan validation failure로 처리한다.
+
+### 추론
+
+- `steps.minItems = 1`은 WebLLM이 requestText를 어떤 command에도 매칭하지 못해도 최소 1개 command를 생성하도록
+  하는 조건이다.
+- 이 조건은 `playback.play` 같은 짧고 payload가 없는 command를 fallback으로 선택하는 동작과 일치한다.
+- command type enum은 command type의 범위를 제한하지만, 어떤 intent에 어떤 command를 선택해야 하는지는 충분히
+  설명하지 않는다.
+- command selection rule이 user payload에만 있으면 작은 모델이 이를 instruction보다 참고 데이터로 취급할 수 있다.
+
+### 해결
+
+- `availableCommandTypes`를 추가해 모델 입력에서 실제 사용 가능한 command type 전체 목록을 명시했다.
+- `commandSelectionRules`에 다음 선택 규칙을 넣었다.
+  - `playback.play`는 명시적인 재생/이어 재생 요청에만 사용한다.
+  - pause, stop, seek, export, range, edit 요청에는 각각 matching non-play command를 사용한다.
+  - export range preview 요청은 range start, range end, preview command를 순서대로 제안한다.
+  - matching command가 없으면 `{"steps":[]}`를 반환한다.
+- 같은 command selection rule을 system prompt에도 직접 포함해 instruction으로 취급되도록 했다.
+- 한국어 intent 예시를 추가해 다음 요청과 command sequence를 직접 연결했다.
+  - `재생해줘` -> `playback.play`
+  - `잠깐 멈춰줘` -> `playback.pause`
+  - `정지하고 처음으로 돌아가` -> `playback.stop`
+  - `10초 위치로 이동해줘` -> `playback.seek`
+  - `1초부터 3초까지 미리 들어볼래` -> `session.exportRange.start.set`, `session.exportRange.end.set`,
+    `session.exportRange.preview.play`
+  - `1초부터 3초까지 wav로 내보내줘` -> `session.exportRange.start.set`, `session.exportRange.end.set`,
+    `session.exportRange.export`
+  - `전체 세션을 wav로 다운로드해줘` -> `session.export`
+- response schema에서 empty `steps`를 허용해 모델이 불확실한 요청에 대해 `playback.play`를 강제로 선택하지 않아도
+  되게 했다.
+- empty plan은 기존 `validateAgentPlanDraft()`에서 `Agent plan must include at least one step.`으로 실패 처리한다.
+
+### 결과
+
+- WebLLM input은 실제 agent-available command type 목록을 별도 필드로 포함한다.
+- WebLLM system prompt와 user payload 모두 command selection rule과 intent 예시를 포함한다.
+- WebLLM은 매칭 실패 시 empty draft plan을 반환할 수 있다.
+- 검증 결과:
+  - `pnpm typecheck`
+  - `pnpm test -- src/apps/agent/planner-adapters/webllm-agent-planner.test.ts`
+
+### 불확실성
+
+- 작은 WebLLM 모델이 command selection rule을 항상 따를지는 보장할 수 없다.
+- 이 변경은 fallback play를 줄이는 제약과 힌트이며, 모델의 의미 해석 품질 자체를 측정한 것은 아니다.
