@@ -850,3 +850,106 @@ planner endpoint를 호출하는 adapter가 없었다. 이 상태에서는 scrip
 3. adapter 책임을 network transport와 response envelope 확인으로 제한했다.
 4. command validation은 중복 구현하지 않고 기존 plan validator에 맡겼다.
 5. timeout은 deduplication이나 debounce가 아니라 단일 request 최대 대기 시간 제한으로 구현했다.
+
+## 10. WebLLM Agent Planner와 Provider Selection 연결
+
+### 작업내용
+
+- WebLLM을 Phase 1 agent planner provider로 연결했다.
+- `WebLLMAgentPlanner`를 추가해 WebLLM chat completion 응답을 `AgentPlanDraft` 후보로 변환하도록 했다.
+- Web path의 기본 planner composition에서 `scripted`, `http`, `webllm` provider를 선택할 수 있게 했다.
+- 브랜치와 PR:
+  - `feature/phase1-webllm-spec` -> PR #5
+  - `feature/phase1-webllm-planner` -> PR #6
+  - `feature/phase1-agent-planner-selection` -> PR #7
+  - `feature/phase1-agent-doc-sync` -> PR #8
+- 주요 파일:
+  - `docs/spec.md`
+  - `package.json`
+  - `pnpm-lock.yaml`
+  - `src/apps/agent/planner-adapters/webllm-agent-planner.ts`
+  - `src/apps/agent/planner-adapters/webllm-agent-planner.test.ts`
+  - `src/apps/agent/planner-adapters/agent-planner-command-definition.ts`
+  - `src/apps/web/agent/default-agent-planner.ts`
+  - `src/apps/web/agent/default-agent-planner.test.ts`
+  - `src/vite-env.d.ts`
+
+### 문제
+
+Phase 1은 자연어 요청을 command plan 후보로 바꾸는 planner provider가 필요했다. 기존 기본 Web path는
+`ScriptedAgentPlanner`만 사용했기 때문에, 정해진 문자열 key에 매칭되는 deterministic plan lookup은 가능했지만
+free-form 자연어 요청을 모델이 해석하는 경로는 없었다.
+
+여기서 "모델이 해석하는 경로"는 WebLLM이 `requestText`, `sessionSummary`, command catalog를 입력으로 받아
+JSON-compatible `AgentPlanDraft`를 생성하는 실행 경로를 뜻한다. command 실행 경로를 뜻하지 않는다.
+
+### 사실
+
+- `@mlc-ai/web-llm@0.2.84`를 dependency로 추가했다.
+- `WebLLMAgentPlanner`는 `IAgentPlanner`를 구현한다.
+- WebLLM engine 생성은 `engineFactory`로 주입할 수 있어 단위 테스트에서 실제 모델을 로드하지 않는다.
+- 기본 engine factory는 `CreateMLCEngine(modelId, { initProgressCallback })`를 동적 import로 호출한다.
+- WebLLM chat completion 요청은 `response_format: { type: 'json_object' }`, `temperature: 0`, `max_tokens: 1000`을 사용한다.
+- planner prompt input은 `requestText`, `sessionSummary`, command catalog로 제한한다.
+- `requiresUserAttachment` command는 metadata만 전달하고 examples는 비워 `File` payload가 모델 입력에 들어가지 않도록 했다.
+- `createDefaultAgentPlanner()`는 설정이 없으면 기존 scripted planner를 유지한다.
+- `VITE_AGENT_PLANNER_PROVIDER=webllm`이면 WebLLM planner를 사용한다.
+- `VITE_AGENT_PLANNER_PROVIDER=http`이면 `VITE_AGENT_PLANNER_ENDPOINT`를 요구한다.
+
+### 추론
+
+- WebLLM planner가 command를 직접 실행하지 않고 `AgentPlanDraft`만 반환하므로, command 실행 권한은 기존
+  `AgentWorkflow.approvePlan()` 경계에 남아 있다.
+- WebLLM 응답을 `AgentPlanDraft`로만 파싱하고 command shape 검증은 `validateAgentPlanDraft()`에 맡겼기 때문에,
+  모델 응답이 잘못된 command를 포함해도 preview 전에 plan validation failure로 분리될 수 있다.
+- default scripted fallback을 유지했기 때문에 WebGPU가 없는 환경에서도 기존 agent demo path는 유지된다.
+
+### 불확실성
+
+- 실제 브라우저에서 WebLLM 모델을 로드하는 동작은 WebGPU 지원, 모델 다운로드, 브라우저 메모리 상태에 의존한다.
+- 단위 테스트는 WebLLM engine 표면을 stub으로 검증했다. 실제 모델의 JSON 응답 품질을 보장하지는 않는다.
+- WebLLM provider는 private API key를 요구하지 않는다. HTTP provider를 사용할 경우 provider key 소유는
+  repository 밖의 server-side endpoint 책임으로 남아 있다.
+
+### 해결
+
+- `WebLLMAgentPlanner`를 추가했다.
+- `createAgentPlannerCommandDefinitions()` helper를 추가해 HTTP planner와 WebLLM planner의 command catalog 입력 규칙을
+  통일했다.
+- WebLLM completion content가 비어 있거나, JSON parse에 실패하거나, `steps` field가 없으면 rejected Promise를
+  반환하도록 했다. 이 rejected Promise는 `AgentWorkflow`의 planning failure 처리 경계로 전달된다.
+- `createDefaultAgentPlanner()`에 provider selection을 추가했다.
+- `ImportMetaEnv`에 다음 public env를 선언했다.
+  - `VITE_AGENT_PLANNER_PROVIDER`
+  - `VITE_AGENT_PLANNER_ENDPOINT`
+  - `VITE_AGENT_WEBLLM_MODEL_ID`
+- `docs/spec.md`의 Phase 1 상태를 현재 구현 기준으로 갱신했다.
+
+### 결과
+
+- Phase 1의 command 후보 생성 항목은 scripted, HTTP adapter, WebLLM adapter를 모두 갖춘 상태가 됐다.
+- WebLLM planner는 model response를 바로 실행하지 않고 preview/approve 경계를 유지한다.
+- Web path는 설정값으로 planner provider를 선택할 수 있다.
+- 검증 결과:
+  - `npx prettier --write .`
+  - `pnpm check` -> 43 files / 306 tests passed
+  - `pnpm build`
+
+### 트레이드오프
+
+- 장점:
+  - 브라우저 안에서 private provider key 없이 자연어 planner를 실행할 수 있는 경로가 생겼다.
+  - default scripted planner가 유지되어 WebGPU가 없는 개발 환경도 깨지지 않는다.
+  - WebLLM과 HTTP provider가 같은 `IAgentPlanner` boundary를 공유한다.
+- 비용:
+  - WebLLM dependency와 별도 dynamic chunk가 추가됐다.
+  - 실제 모델 loading과 응답 품질은 단위 테스트로 완전히 검증할 수 없다.
+  - provider 선택은 public env 기반이며, 런타임 UI 선택 기능은 아직 없다.
+
+### 사고의 흐름
+
+1. Phase 1의 남은 핵심 gap을 "free-form 자연어 planner provider"로 좁혔다.
+2. command 실행 권한을 모델 provider에 주지 않고, 기존 preview/approve 경계를 유지하는 것을 필수 조건으로 뒀다.
+3. WebLLM SDK를 직접 UI에 붙이지 않고 `IAgentPlanner` adapter로 감싸 교체 범위를 제한했다.
+4. 실제 모델 로딩은 비용이 크고 환경 의존적이므로, 단위 테스트에서는 engine factory를 주입해 adapter contract만 검증했다.
+5. Web path provider selection은 composition 책임이므로 `createDefaultAgentPlanner()`에 env 기반 분기를 추가했다.
