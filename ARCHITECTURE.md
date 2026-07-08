@@ -4,16 +4,16 @@
 
 Drop AI v3의 목표는 command-first 구조 자체를 증명하는 것이 아니라, 브라우저에서 실제로 작동하는 lightweight DAW를 만드는 것이다.
 
-사용자는 오디오 파일을 업로드하고, 재생하고, region을 편집하고, 결과를 WAV로 export할 수 있어야 한다. command-first 구조는 이 목표를 돕는 내부 설계 원칙이다. UI, CLI, keyboard shortcut, automation, plugin 같은 입력 경로가 늘어나도 같은 편집 코어를 공유하게 하기 위한 장치다.
+사용자는 오디오 파일을 업로드하고, 재생하고, region을 편집하고, 결과를 WAV로 export할 수 있어야 한다. command-first 구조는 이 목표를 돕는 내부 설계 원칙이다. UI, CLI, keyboard shortcut, AI agent, plugin 같은 입력 경로가 늘어나도 같은 편집 코어를 공유하게 하기 위한 장치다.
 
 ## 입력 경로 단일화
 
-DAW는 입력 경로가 빨리 늘어난다. React UI 버튼, CLI 문자열, 키보드 단축키, 자동화 command, 테스트 replay가 모두 같은 편집 의도를 만들 수 있다. 각 경로가 controller 세부 메서드를 직접 호출하면 같은 의도라도 검증, 분기, side effect 순서가 달라진다.
+DAW는 입력 경로가 빨리 늘어난다. React UI 버튼, CLI 문자열, 키보드 단축키, agent action, 테스트 replay가 모두 같은 편집 의도를 만들 수 있다. 각 경로가 controller 세부 메서드를 직접 호출하면 같은 의도라도 검증, 분기, side effect 순서가 달라진다.
 
 따라서 모든 쓰기 입력은 `AppController.executeCommand(rawCommand)`라는 하나의 진입점을 통과한다. raw command는 Zod로 검증되고, `CommandController`가 도메인별 controller로 분기한다.
 
 ```txt
-Apps (Web UI · CLI · Keyboard · Test)
+Apps (Web UI · CLI · Keyboard · AI Agent · Test)
   -> AppController.executeCommand(rawCommand)
     -> CommandController (Zod validation + dispatch)
       -> PlaybackController       -> IAudioEngine + SessionStore
@@ -62,7 +62,7 @@ Apps (Web UI · CLI · Keyboard · Test)
 
 사용자는 command-first라는 말을 신경 쓰지 않는다. 사용자는 오디오가 재생되고, 편집이 반영되고, export 파일이 열리기를 기대한다.
 
-그럼에도 command-first를 유지하는 이유는 입력 경로가 늘어났을 때 제품 동작을 일관되게 유지하기 위해서다. 새 UI 버튼이나 자동화 action을 만들 때 도메인 controller를 새로 우회하지 않고 command를 만들어 기존 실행 경계에 넣는다.
+그럼에도 command-first를 유지하는 이유는 입력 경로가 늘어났을 때 제품 동작을 일관되게 유지하기 위해서다. 새 UI 버튼이나 agent action을 만들 때 도메인 controller를 새로 우회하지 않고 command를 만들어 기존 실행 경계에 넣는다.
 
 ### 2. Asset은 region과 분리한다
 
