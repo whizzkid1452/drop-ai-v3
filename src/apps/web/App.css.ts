@@ -362,6 +362,52 @@ export const agentForm = style({
   gap: vars.space.md,
 });
 
+export const agentMessageList = style({
+  display: 'grid',
+  maxHeight: 280,
+  gap: vars.space.sm,
+  margin: 0,
+  overflow: 'auto',
+  padding: 0,
+  listStyle: 'none',
+});
+
+export const agentMessage = style({
+  display: 'grid',
+  maxWidth: '92%',
+  gap: vars.space.xs,
+  border: `1px solid ${vars.color.border}`,
+  borderRadius: vars.radius.control,
+  padding: vars.space.md,
+  background: vars.color.panelRaised,
+});
+
+export const agentMessageUser = style({
+  justifySelf: 'end',
+  borderColor: vars.color.borderStrong,
+  background: vars.color.surfaceHighlight,
+});
+
+export const agentMessageAssistant = style({
+  justifySelf: 'start',
+});
+
+export const agentMessageRole = style({
+  color: vars.color.textMuted,
+  fontFamily: vars.font.mono,
+  fontSize: 11,
+  textTransform: 'uppercase',
+});
+
+export const agentMessageContent = style({
+  margin: 0,
+  color: vars.color.text,
+  fontSize: 13,
+  lineHeight: 1.5,
+  whiteSpace: 'pre-wrap',
+  overflowWrap: 'anywhere',
+});
+
 export const agentInputLabel = style({
   display: 'grid',
   gap: vars.space.sm,

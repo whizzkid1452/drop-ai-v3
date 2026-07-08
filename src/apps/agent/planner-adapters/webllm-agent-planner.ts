@@ -1,4 +1,10 @@
 import type { AgentPlanDraft } from '../agent-plan';
+import type {
+  AgentChatMessage,
+  AgentResponseDraft,
+  AgentResponseInput,
+  IAgentResponder,
+} from '../agent-chat';
 import type { AgentPlanningInput, IAgentPlanner } from '../agent-workflow';
 import { createAgentPlannerCommandDefinitions } from './agent-planner-command-definition';
 
@@ -101,7 +107,7 @@ export interface WebLLMChatCompletionRequest {
 }
 
 export interface WebLLMChatCompletionMessage {
-  role: 'system' | 'user';
+  role: 'assistant' | 'system' | 'user';
   content: string;
 }
 
@@ -124,12 +130,22 @@ interface WebLLMPlannerPromptPayload {
   commandSelectionRules: readonly string[];
 }
 
+interface WebLLMResponsePromptPayload {
+  requestText: string;
+  conversationMessages: readonly AgentChatMessage[];
+  sessionSummary: AgentResponseInput['sessionSummary'];
+  availableCommandTypes: string[];
+  commandCatalog: ReturnType<typeof createAgentPlannerCommandDefinitions>;
+  intentExamples: readonly CommandSelectionExample[];
+  commandSelectionRules: readonly string[];
+}
+
 interface CommandSelectionExample {
   requestText: string;
   commandTypes: readonly string[];
 }
 
-export class WebLLMAgentPlanner implements IAgentPlanner {
+export class WebLLMAgentPlanner implements IAgentPlanner, IAgentResponder {
   private readonly engineFactory: WebLLMEngineFactory;
   private readonly initProgressCallback?: WebLLMInitProgressCallback;
   private readonly maxTokens: number;
@@ -171,6 +187,28 @@ export class WebLLMAgentPlanner implements IAgentPlanner {
     return parsePlanDraftContent(content, input.commandCatalog);
   }
 
+  async createResponse(input: AgentResponseInput): Promise<AgentResponseDraft> {
+    const engine = await this.getEngine();
+    const completion = await engine.chat.completions.create({
+      max_tokens: this.maxTokens,
+      messages: createWebLLMResponseMessages(input),
+      response_format: {
+        schema: createAgentResponseDraftResponseSchema(input),
+        type: 'json_object',
+      },
+      temperature: this.temperature,
+    });
+    const content = completion.choices[0]?.message.content;
+
+    if (!content) {
+      throw new Error(
+        'WebLLM responder response must include message content.'
+      );
+    }
+
+    return parseResponseDraftContent(content, input.commandCatalog);
+  }
+
   async preload(): Promise<void> {
     await this.getEngine();
   }
@@ -209,6 +247,21 @@ function createWebLLMMessages(
   ];
 }
 
+function createWebLLMResponseMessages(
+  input: AgentResponseInput
+): WebLLMChatCompletionMessage[] {
+  return [
+    {
+      content: createResponseSystemPrompt(),
+      role: 'system',
+    },
+    {
+      content: JSON.stringify(createResponsePromptPayload(input)),
+      role: 'user',
+    },
+  ];
+}
+
 function createSystemPrompt(): string {
   return [
     'You convert a Drop AI user request into an AgentPlanDraft JSON object.',
@@ -220,6 +273,29 @@ function createSystemPrompt(): string {
     'Use payload keys exactly as shown in payloadDescription and examples.',
     'Include command.payload only when payloadDescription is not "No payload.".',
     'Never choose playback.play as a fallback for unclear, export, edit, range, stop, pause, seek, or setup requests.',
+    'Do not create File, Blob, or object URL payloads.',
+    'Do not execute commands. Only propose command steps for user approval.',
+    'Command selection rules:',
+    ...COMMAND_SELECTION_RULES.map((rule) => `- ${rule}`),
+    'Korean intent examples:',
+    ...COMMAND_SELECTION_EXAMPLES.map(formatCommandSelectionExample),
+  ].join('\n');
+}
+
+function createResponseSystemPrompt(): string {
+  return [
+    'You are Drop AI, a chat assistant inside a browser digital audio workstation (DAW).',
+    'Return only valid JSON with this shape: {"message":"...","steps":[...]}',
+    'message is the assistant chat response shown to the user. Write it in the same language as the latest user request.',
+    'Use steps only when the user explicitly asks to control playback, edit tracks or regions, set export ranges, or export audio.',
+    'If steps has entries, message must say the action is ready for review and not claim it has already been executed.',
+    'If the user asks a question, asks for advice, or gives an unclear request, answer normally and set steps to [].',
+    'Use only commandCatalog entries whose availability is "agent".',
+    'availableCommandTypes contains the complete list of command types you may return.',
+    'Set command.type to one exact commandCatalog type string. Do not translate, rename, abbreviate, or invent command types.',
+    'Use payload keys exactly as shown in payloadDescription and examples.',
+    'Include command.payload only when payloadDescription is not "No payload.".',
+    'Never choose playback.play as a fallback for unclear, export, edit, range, stop, pause, seek, setup, or general chat requests.',
     'Do not create File, Blob, or object URL payloads.',
     'Do not execute commands. Only propose command steps for user approval.',
     'Command selection rules:',
@@ -242,6 +318,20 @@ function createPromptPayload(
   };
 }
 
+function createResponsePromptPayload(
+  input: AgentResponseInput
+): WebLLMResponsePromptPayload {
+  return {
+    availableCommandTypes: createAvailableAgentCommandTypes(input),
+    commandCatalog: createAgentPlannerCommandDefinitions(input.commandCatalog),
+    commandSelectionRules: COMMAND_SELECTION_RULES,
+    conversationMessages: input.messages,
+    intentExamples: COMMAND_SELECTION_EXAMPLES,
+    requestText: input.requestText,
+    sessionSummary: input.sessionSummary,
+  };
+}
+
 function formatCommandSelectionExample(
   example: CommandSelectionExample
 ): string {
@@ -253,27 +343,7 @@ function createAgentPlanDraftResponseSchema(input: AgentPlanningInput): string {
     additionalProperties: false,
     properties: {
       steps: {
-        items: {
-          additionalProperties: false,
-          properties: {
-            command: {
-              additionalProperties: false,
-              properties: {
-                payload: {
-                  additionalProperties: true,
-                  type: RESPONSE_SCHEMA_OBJECT_TYPE,
-                },
-                type: createCommandTypeResponseSchema(input),
-              },
-              required: ['type'],
-              type: RESPONSE_SCHEMA_OBJECT_TYPE,
-            },
-            id: { type: 'string' },
-            reason: { type: 'string' },
-          },
-          required: ['id', 'reason', 'command'],
-          type: RESPONSE_SCHEMA_OBJECT_TYPE,
-        },
+        items: createAgentPlanStepResponseSchema(input),
         type: 'array',
       },
     },
@@ -282,7 +352,72 @@ function createAgentPlanDraftResponseSchema(input: AgentPlanningInput): string {
   });
 }
 
-function createCommandTypeResponseSchema(input: AgentPlanningInput): {
+function createAgentResponseDraftResponseSchema(
+  input: AgentResponseInput
+): string {
+  return JSON.stringify({
+    additionalProperties: false,
+    properties: {
+      message: { type: 'string' },
+      steps: {
+        items: createAgentPlanStepResponseSchema(input),
+        type: 'array',
+      },
+    },
+    required: ['message', 'steps'],
+    type: RESPONSE_SCHEMA_OBJECT_TYPE,
+  });
+}
+
+function createAgentPlanStepResponseSchema(
+  input: AgentPlanningInput | AgentResponseInput
+): {
+  additionalProperties: false;
+  properties: {
+    command: {
+      additionalProperties: false;
+      properties: {
+        payload: {
+          additionalProperties: true;
+          type: typeof RESPONSE_SCHEMA_OBJECT_TYPE;
+        };
+        type: ReturnType<typeof createCommandTypeResponseSchema>;
+      };
+      required: ['type'];
+      type: typeof RESPONSE_SCHEMA_OBJECT_TYPE;
+    };
+    id: { type: 'string' };
+    reason: { type: 'string' };
+  };
+  required: ['id', 'reason', 'command'];
+  type: typeof RESPONSE_SCHEMA_OBJECT_TYPE;
+} {
+  return {
+    additionalProperties: false,
+    properties: {
+      command: {
+        additionalProperties: false,
+        properties: {
+          payload: {
+            additionalProperties: true,
+            type: RESPONSE_SCHEMA_OBJECT_TYPE,
+          },
+          type: createCommandTypeResponseSchema(input),
+        },
+        required: ['type'],
+        type: RESPONSE_SCHEMA_OBJECT_TYPE,
+      },
+      id: { type: 'string' },
+      reason: { type: 'string' },
+    },
+    required: ['id', 'reason', 'command'],
+    type: RESPONSE_SCHEMA_OBJECT_TYPE,
+  };
+}
+
+function createCommandTypeResponseSchema(
+  input: AgentPlanningInput | AgentResponseInput
+): {
   enum?: string[];
   type: 'string';
 } {
@@ -298,7 +433,9 @@ function createCommandTypeResponseSchema(input: AgentPlanningInput): {
   };
 }
 
-function createAvailableAgentCommandTypes(input: AgentPlanningInput): string[] {
+function createAvailableAgentCommandTypes(
+  input: AgentPlanningInput | AgentResponseInput
+): string[] {
   return input.commandCatalog
     .filter((definition) => definition.availability === 'agent')
     .map((definition) => definition.type);
@@ -321,6 +458,43 @@ function parsePlanDraftContent(
   }
 
   return {
+    steps: normalizePlanDraftSteps({
+      commandCatalog,
+      steps: value.steps,
+    }),
+  };
+}
+
+function parseResponseDraftContent(
+  content: string,
+  commandCatalog: AgentResponseInput['commandCatalog']
+): AgentResponseDraft {
+  let value: unknown;
+
+  try {
+    value = JSON.parse(content);
+  } catch {
+    throw new Error('WebLLM responder response must be valid JSON.');
+  }
+
+  if (!isRecord(value) || !('message' in value) || !('steps' in value)) {
+    throw new Error(
+      'WebLLM responder response must include message and steps fields.'
+    );
+  }
+
+  if (typeof value.message !== 'string' || value.message.trim().length === 0) {
+    throw new Error(
+      'WebLLM responder response message must be a non-empty string.'
+    );
+  }
+
+  if (!Array.isArray(value.steps)) {
+    throw new Error('WebLLM responder response steps must be an array.');
+  }
+
+  return {
+    message: value.message.trim(),
     steps: normalizePlanDraftSteps({
       commandCatalog,
       steps: value.steps,

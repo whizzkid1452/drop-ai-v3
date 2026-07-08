@@ -1,25 +1,28 @@
-import { useState } from 'react';
-import type {
-  ApproveAgentPlanResult,
-  RequestAgentPlanResult,
-} from '@/apps/agent/agent-workflow';
+import { useState, type KeyboardEvent } from 'react';
+import type { AgentChatMessage } from '@/apps/agent/agent-chat';
 import type { AgentCommandPlan } from '@/apps/agent/agent-plan';
+import type { ApproveAgentPlanResult } from '@/apps/agent/agent-workflow';
 import type { CommandResult, SessionExportResult } from '@/controllers';
 import {
+  useAgentChatWorkflow,
   useAgentPlannerProgress,
-  useAgentWorkflow,
   useClearAgentPlannerProgress,
   type AgentPlannerProgress,
 } from '../AppProvider';
 import * as styles from '../App.css';
 
-type AgentPendingAction = 'request' | 'approve' | 'reject';
+type AgentPendingAction = 'approve' | 'reject' | 'send';
+
+interface AgentPanelMessage extends AgentChatMessage {
+  id: string;
+}
 
 export function AgentPanel() {
-  const agentWorkflow = useAgentWorkflow();
+  const agentChatWorkflow = useAgentChatWorkflow();
   const agentPlannerProgress = useAgentPlannerProgress();
   const clearAgentPlannerProgress = useClearAgentPlannerProgress();
   const [requestText, setRequestText] = useState('');
+  const [messages, setMessages] = useState<AgentPanelMessage[]>([]);
   const [plan, setPlan] = useState<AgentCommandPlan | null>(null);
   const [pendingAction, setPendingAction] = useState<AgentPendingAction | null>(
     null
@@ -27,33 +30,83 @@ export function AgentPanel() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [executionMessage, setExecutionMessage] = useState<string | null>(null);
 
-  async function requestPlan(): Promise<void> {
-    const normalizedRequestText = requestText.trim();
+  async function sendMessage(requestTextOverride = requestText): Promise<void> {
+    const normalizedRequestText = requestTextOverride.trim();
     if (!normalizedRequestText) {
-      setErrorMessage('Enter a request before creating a plan.');
+      setErrorMessage('Enter a message before sending.');
       return;
     }
 
-    setPendingAction('request');
+    const conversationMessages = messages.map(toAgentChatMessage);
+    const userMessage = createPanelMessage({
+      content: normalizedRequestText,
+      role: 'user',
+    });
+    const assistantMessage = createPanelMessage({
+      content: 'Thinking...',
+      role: 'assistant',
+    });
+
+    setPendingAction('send');
     setErrorMessage(null);
     setExecutionMessage(null);
     setPlan(null);
+    setRequestText('');
+    setMessages((previousMessages) => [
+      ...previousMessages,
+      userMessage,
+      assistantMessage,
+    ]);
 
     if (agentPlannerProgress?.status !== 'loading') {
       clearAgentPlannerProgress();
     }
 
     try {
-      const result = await agentWorkflow.requestPlan({
+      const result = await agentChatWorkflow.sendMessage({
+        messages: [...conversationMessages, toAgentChatMessage(userMessage)],
         requestText: normalizedRequestText,
       });
 
-      applyPlanRequestResult(result);
+      if (!result.ok) {
+        const errorText = result.errors
+          .map((error) => error.message)
+          .join('\n');
+
+        updateMessageContent(assistantMessage.id, errorText);
+        setErrorMessage(errorText);
+        return;
+      }
+
+      updateMessageContent(assistantMessage.id, result.assistantMessage);
+      setPlan(result.plan);
     } catch {
-      setErrorMessage('Agent planner failed to create a command plan.');
+      const errorText = 'Agent failed to create a chat response.';
+      updateMessageContent(assistantMessage.id, errorText);
+      setErrorMessage(errorText);
     } finally {
       setPendingAction(null);
     }
+  }
+
+  function handleRequestTextKeyDown(
+    event: KeyboardEvent<HTMLTextAreaElement>
+  ): void {
+    if (
+      event.key !== 'Enter' ||
+      event.shiftKey ||
+      event.nativeEvent.isComposing
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (pendingAction !== null) {
+      return;
+    }
+
+    void sendMessage(event.currentTarget.value);
   }
 
   function rejectPlan(): void {
@@ -62,7 +115,7 @@ export function AgentPanel() {
     }
 
     setPendingAction('reject');
-    const rejectedPlan = agentWorkflow.rejectPlan({ plan });
+    const rejectedPlan = agentChatWorkflow.rejectPlan({ plan });
     setPlan(rejectedPlan);
     setExecutionMessage('Plan rejected.');
     setErrorMessage(null);
@@ -78,19 +131,10 @@ export function AgentPanel() {
     setErrorMessage(null);
     setExecutionMessage(null);
 
-    const result = await agentWorkflow.approvePlan({ plan });
+    const result = await agentChatWorkflow.approvePlan({ plan });
 
     setPendingAction(null);
     applyPlanApprovalResult(result);
-  }
-
-  function applyPlanRequestResult(result: RequestAgentPlanResult): void {
-    if (!result.ok) {
-      setErrorMessage(result.errors.map((error) => error.message).join('\n'));
-      return;
-    }
-
-    setPlan(result.plan);
   }
 
   function applyPlanApprovalResult(result: ApproveAgentPlanResult): void {
@@ -112,11 +156,19 @@ export function AgentPanel() {
     );
   }
 
+  function updateMessageContent(messageId: string, content: string): void {
+    setMessages((previousMessages) =>
+      previousMessages.map((message) =>
+        message.id === messageId ? { ...message, content } : message
+      )
+    );
+  }
+
   const hasDraftPlan = plan?.status === 'draft';
   const shouldShowPlannerProgress = agentPlannerProgress !== null;
 
   return (
-    <section className={styles.agentPanel} aria-label="Agent command planner">
+    <section className={styles.agentPanel} aria-label="Agent chat">
       <div className={styles.agentHeader}>
         <h2 className={styles.sectionTitle}>Agent</h2>
         {plan ? (
@@ -129,18 +181,20 @@ export function AgentPanel() {
         className={styles.agentForm}
         onSubmit={(event) => {
           event.preventDefault();
-          void requestPlan();
+          void sendMessage();
         }}
       >
+        <AgentMessageList messages={messages} />
         <label className={styles.agentInputLabel}>
-          <span className={styles.summaryLabel}>Request</span>
+          <span className={styles.summaryLabel}>Message</span>
           <textarea
-            aria-label="Agent request"
+            aria-label="Agent message"
             className={styles.agentTextarea}
             data-testid="agent-request-input"
             rows={3}
             value={requestText}
             onChange={(event) => setRequestText(event.currentTarget.value)}
+            onKeyDown={handleRequestTextKeyDown}
           />
         </label>
         <button
@@ -148,9 +202,9 @@ export function AgentPanel() {
           data-testid="agent-request-plan"
           disabled={pendingAction !== null}
           type="button"
-          onClick={() => void requestPlan()}
+          onClick={() => void sendMessage()}
         >
-          Plan
+          Send
         </button>
       </form>
       {shouldShowPlannerProgress ? (
@@ -193,6 +247,35 @@ export function AgentPanel() {
         </p>
       ) : null}
     </section>
+  );
+}
+
+function AgentMessageList({ messages }: { messages: AgentPanelMessage[] }) {
+  if (messages.length === 0) {
+    return null;
+  }
+
+  return (
+    <ol className={styles.agentMessageList} data-testid="agent-messages">
+      {messages.map((message) => (
+        <li
+          className={`${styles.agentMessage} ${
+            message.role === 'user'
+              ? styles.agentMessageUser
+              : styles.agentMessageAssistant
+          }`}
+          key={message.id}
+        >
+          <span className={styles.agentMessageRole}>{message.role}</span>
+          <p
+            className={styles.agentMessageContent}
+            data-testid="agent-message-content"
+          >
+            {message.content}
+          </p>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -367,4 +450,33 @@ function isSessionExportResult(value: unknown): value is SessionExportResult {
     'filename' in value &&
     typeof value.filename === 'string'
   );
+}
+
+function createPanelMessage({
+  content,
+  role,
+}: AgentChatMessage): AgentPanelMessage {
+  return {
+    content,
+    id: createMessageId(),
+    role,
+  };
+}
+
+function toAgentChatMessage(message: AgentPanelMessage): AgentChatMessage {
+  return {
+    content: message.content,
+    role: message.role,
+  };
+}
+
+function createMessageId(): string {
+  if (
+    typeof crypto !== 'undefined' &&
+    typeof crypto.randomUUID === 'function'
+  ) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random()}`;
 }

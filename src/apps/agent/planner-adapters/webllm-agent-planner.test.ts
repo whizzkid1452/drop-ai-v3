@@ -164,6 +164,54 @@ describe('WebLLMAgentPlanner', () => {
     });
   });
 
+  it('requests a chat response with optional command steps', async () => {
+    const engine = createEngineReturning(
+      JSON.stringify({
+        message: '현재 세션에는 트랙이 없습니다.',
+        steps: [],
+      })
+    );
+    const planner = new WebLLMAgentPlanner({
+      engineFactory: createEngineFactory(engine),
+    });
+
+    const response = await planner.createResponse({
+      commandCatalog: agentCommandCatalog,
+      messages: [{ content: '현재 상태 알려줘', role: 'user' }],
+      requestText: '현재 상태 알려줘',
+      sessionSummary: createPlanningInput().sessionSummary,
+    });
+
+    expect(response).toEqual({
+      message: '현재 세션에는 트랙이 없습니다.',
+      steps: [],
+    });
+
+    const completionRequest = getCompletionRequest(engine);
+    const responseSchema = JSON.parse(completionRequest.response_format.schema);
+
+    expect(responseSchema).toMatchObject({
+      properties: {
+        message: { type: 'string' },
+        steps: {
+          type: 'array',
+        },
+      },
+      required: ['message', 'steps'],
+      type: 'object',
+    });
+    expect(completionRequest.messages[0]?.content).toContain(
+      'a chat assistant inside a browser digital audio workstation'
+    );
+    expect(completionRequest.messages[0]?.content).toContain(
+      'Never choose playback.play as a fallback'
+    );
+    expect(getPromptPayload(completionRequest)).toMatchObject({
+      conversationMessages: [{ content: '현재 상태 알려줘', role: 'user' }],
+      requestText: '현재 상태 알려줘',
+    });
+  });
+
   it('passes model loading options to the engine factory and reuses the loaded engine', async () => {
     const engine = createEngineReturning(JSON.stringify({ steps: [] }));
     const engineFactory = createEngineFactory(engine);

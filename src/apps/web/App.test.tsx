@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
 import { createApp, type IAppHandle } from '@/composition/create-app';
+import { ScriptedAgentPlanner } from '@/apps/agent/scripted-agent-planner';
 import { createCallRecorder } from '@/testing/call-recorder';
 import App from './App';
 import { AppProvider } from './AppProvider';
@@ -114,13 +115,20 @@ function renderApp(): {
   root = createRoot(container);
   act(() => {
     root?.render(
-      <AppProvider createAppHandle={() => app}>
+      <AppProvider
+        createAgentPlanner={createNoopAgentPlanner}
+        createAppHandle={() => app}
+      >
         <App />
       </AppProvider>
     );
   });
 
   return { app, container, recorder };
+}
+
+function createNoopAgentPlanner(): ScriptedAgentPlanner {
+  return new ScriptedAgentPlanner({ scripts: {} });
 }
 
 async function uploadFile(container: HTMLElement, file: File): Promise<void> {

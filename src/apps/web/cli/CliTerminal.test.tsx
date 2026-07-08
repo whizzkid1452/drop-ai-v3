@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeAudioEngine } from '@/audio-engine/fake-audio-engine';
+import { ScriptedAgentPlanner } from '@/apps/agent/scripted-agent-planner';
 import { createApp, type IAppHandle } from '@/composition/create-app';
 import { AppProvider } from '../AppProvider';
 import {
@@ -115,13 +116,20 @@ function renderTerminal(
   root = createRoot(container);
   act(() => {
     root?.render(
-      <AppProvider createAppHandle={() => app}>
+      <AppProvider
+        createAgentPlanner={createNoopAgentPlanner}
+        createAppHandle={() => app}
+      >
         <CliTerminal uploadInfo={uploadInfo} />
       </AppProvider>
     );
   });
 
   return container;
+}
+
+function createNoopAgentPlanner(): ScriptedAgentPlanner {
+  return new ScriptedAgentPlanner({ scripts: {} });
 }
 
 function findByTestId(container: HTMLElement, testId: string): HTMLElement {

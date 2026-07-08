@@ -71,14 +71,40 @@ describe('AgentPanel', () => {
     );
   });
 
-  it('shows validation errors without executing commands', async () => {
+  it('submits the message when Enter is pressed in the textarea', async () => {
+    const { container } = renderAgentPanel({
+      scripts: {
+        play: {
+          steps: [
+            {
+              command: { type: 'playback.play' },
+              id: 'step-1',
+              reason: 'Start playback.',
+            },
+          ],
+        },
+      },
+    });
+
+    await requestPlanWithEnter(container, 'play');
+
+    expect(getText(container, 'agent-plan-status')).toBe('Draft plan');
+    expect(getTexts(container, 'agent-plan-step-command')).toEqual([
+      'playback.play',
+    ]);
+  });
+
+  it('shows a chat response without executing commands when no plan is returned', async () => {
     const { app, container } = renderAgentPanel({ scripts: {} });
 
     await requestPlan(container, 'unknown request');
 
-    expect(getText(container, 'agent-error')).toBe(
-      'Agent plan must include at least one step.'
-    );
+    expect(getTexts(container, 'agent-message-content')).toEqual([
+      'unknown request',
+      'I can answer questions about this session, or prepare a command plan when you ask for a concrete DAW action.',
+    ]);
+    expect(queryByTestId(container, 'agent-error')).toBeNull();
+    expect(queryByTestId(container, 'agent-plan-status')).toBeNull();
     expect(app.sessionReader.getState().playback.positionSeconds).toBe(0);
   });
 
@@ -90,7 +116,7 @@ describe('AgentPanel', () => {
     await requestPlan(container, 'preview');
 
     expect(getText(container, 'agent-error')).toBe(
-      'Agent planner failed to create a command plan.'
+      'Agent failed to create a chat response.'
     );
     expect(app.sessionReader.getState().playback.positionSeconds).toBe(0);
     expect(getButton(container, 'agent-request-plan').disabled).toBe(false);
@@ -270,6 +296,30 @@ async function requestPlan(
   });
 
   await clickByTestId(container, 'agent-request-plan');
+}
+
+async function requestPlanWithEnter(
+  container: HTMLElement,
+  requestText: string
+): Promise<void> {
+  const input = queryByTestId(container, 'agent-request-input');
+
+  if (!(input instanceof HTMLTextAreaElement)) {
+    throw new Error('Could not find agent request input.');
+  }
+
+  await act(async () => {
+    setTextAreaValue(input, requestText);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key: 'Enter',
+      })
+    );
+    await flushMicrotasks();
+  });
 }
 
 function setTextAreaValue(

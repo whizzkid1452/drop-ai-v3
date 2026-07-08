@@ -44,6 +44,7 @@ describe('AppProvider', () => {
     act(() => {
       root?.render(
         <AppProvider
+          createAgentPlanner={createNoopAgentPlanner}
           createAppHandle={() =>
             createApp({
               audioEngine: new FakeAudioEngine(),
@@ -85,7 +86,10 @@ describe('AppProvider', () => {
     root = createRoot(container);
     act(() => {
       root?.render(
-        <AppProvider createAppHandle={() => app}>
+        <AppProvider
+          createAgentPlanner={createNoopAgentPlanner}
+          createAppHandle={() => app}
+        >
           <p>Mounted</p>
         </AppProvider>
       );
@@ -164,6 +168,10 @@ describe('AppProvider', () => {
     expect(app.sessionReader.getState().playback.positionSeconds).toBe(2);
   });
 });
+
+function createNoopAgentPlanner(): ScriptedAgentPlanner {
+  return new ScriptedAgentPlanner({ scripts: {} });
+}
 
 function getText(container: HTMLElement, testId: string): string {
   const element = container.querySelector(`[data-testid="${testId}"]`);

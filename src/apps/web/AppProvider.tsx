@@ -13,6 +13,12 @@ import { AgentWorkflow, type IAgentPlanner } from '@/apps/agent/agent-workflow';
 import { createApp, type IAppHandle } from '@/composition/create-app';
 import type { AppController } from '@/controllers/app-controller';
 import {
+  AgentChatWorkflow,
+  createPlannerBackedAgentResponder,
+  isAgentResponder,
+  type IAgentResponder,
+} from '@/apps/agent/agent-chat';
+import {
   createDefaultAgentPlanner,
   type CreateDefaultAgentPlannerInput,
 } from './agent/default-agent-planner';
@@ -26,6 +32,9 @@ export interface AppProviderProps {
   children: ReactNode;
   createAgentPlanId?: () => string;
   createAgentPlanner?: (input: CreateDefaultAgentPlannerInput) => IAgentPlanner;
+  createAgentResponder?: (
+    input: CreateDefaultAgentPlannerInput
+  ) => IAgentResponder;
   createAppHandle?: () => IAppHandle;
 }
 
@@ -37,6 +46,7 @@ export interface AgentPlannerProgress {
 }
 
 interface WebAppRuntime {
+  agentChatWorkflow: AgentChatWorkflow;
   agentPlanner: IAgentPlanner;
   agentWorkflow: AgentWorkflow;
   app: IAppHandle;
@@ -57,6 +67,7 @@ export function AppProvider({
   children,
   createAgentPlanId,
   createAgentPlanner = createDefaultAgentPlanner,
+  createAgentResponder,
   createAppHandle = createDefaultAppHandle,
 }: AppProviderProps) {
   const isMountedRef = useRef(true);
@@ -75,19 +86,29 @@ export function AppProvider({
   }, []);
   const [runtime] = useState(() => {
     const app = createAppHandle();
-    const agentPlanner = createAgentPlanner({
+    const agentAdapterInput = {
       webLLMInitProgressCallback: (report) => {
         setAgentPlannerProgressIfMounted(createAgentPlannerProgress(report));
       },
-    });
+    } satisfies CreateDefaultAgentPlannerInput;
+    const agentPlanner = createAgentPlanner(agentAdapterInput);
+    const agentResponder = createAgentResponder
+      ? createAgentResponder(agentAdapterInput)
+      : createAgentResponderFromPlanner(agentPlanner);
     const agentWorkflow = new AgentWorkflow({
       commandExecutor: app.controller,
       createPlanId: createAgentPlanId,
       getSessionState: () => app.sessionReader.getState(),
       planner: agentPlanner,
     });
+    const agentChatWorkflow = new AgentChatWorkflow({
+      createPlanId: createAgentPlanId,
+      getSessionState: () => app.sessionReader.getState(),
+      planWorkflow: agentWorkflow,
+      responder: agentResponder,
+    });
 
-    return { agentPlanner, agentWorkflow, app };
+    return { agentChatWorkflow, agentPlanner, agentWorkflow, app };
   });
   const contextValue = useMemo(
     () => ({
@@ -151,6 +172,10 @@ export function useAppController(): AppController {
 
 export function useAgentWorkflow(): AgentWorkflow {
   return useWebAppContext().agentWorkflow;
+}
+
+export function useAgentChatWorkflow(): AgentChatWorkflow {
+  return useWebAppContext().agentChatWorkflow;
 }
 
 export function useAgentPlannerProgress(): AgentPlannerProgress | null {
@@ -231,6 +256,16 @@ function isPreloadableAgentPlanner(
     'preload' in agentPlanner &&
     typeof (agentPlanner as { preload?: unknown }).preload === 'function'
   );
+}
+
+function createAgentResponderFromPlanner(
+  agentPlanner: IAgentPlanner
+): IAgentResponder {
+  if (isAgentResponder(agentPlanner)) {
+    return agentPlanner;
+  }
+
+  return createPlannerBackedAgentResponder(agentPlanner);
 }
 
 function useWebAppContext(): WebAppContextValue {
