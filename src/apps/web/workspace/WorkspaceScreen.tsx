@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import { AgentPanel } from '../agent/AgentPanel';
 import type { WebSessionState } from '../AppProvider';
 import type { UploadedSessionInfo } from '../upload/upload-session-flow';
 import * as styles from '../App.css';
@@ -31,6 +32,7 @@ export function WorkspaceScreen({ session, uploadInfo }: WorkspaceScreenProps) {
       </header>
       <div className={styles.layoutGrid}>
         <div className={styles.sidePanelStack}>
+          <AgentPanel />
           <TransportControls session={session} />
           <SessionSummary session={session} uploadInfo={uploadInfo} />
         </div>
