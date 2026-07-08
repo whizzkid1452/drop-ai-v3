@@ -14,7 +14,7 @@
 
 ```mermaid
 graph TD
-    Apps["Apps (CLI, Web, Agent)"]
+    Apps["Apps (CLI, Web)"]
     Controllers["Controllers (AppController Facade)"]
     Session["Session (Zustand Vanilla Store)"]
     AudioEngine["Audio Engine"]

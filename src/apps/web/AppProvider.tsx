@@ -7,10 +7,8 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import { AgentWorkflow, type IAgentPlanner } from '@/apps/agent/agent-workflow';
 import { createApp, type IAppHandle } from '@/composition/create-app';
 import type { AppController } from '@/controllers/app-controller';
-import { createDefaultAgentPlanner } from './agent/default-agent-planner';
 
 export type WebSessionState = ReturnType<
   IAppHandle['sessionReader']['getState']
@@ -18,13 +16,10 @@ export type WebSessionState = ReturnType<
 
 export interface AppProviderProps {
   children: ReactNode;
-  createAgentPlanId?: () => string;
-  createAgentPlanner?: () => IAgentPlanner;
   createAppHandle?: () => IAppHandle;
 }
 
 interface WebAppRuntime {
-  agentWorkflow: AgentWorkflow;
   app: IAppHandle;
 }
 
@@ -36,20 +31,12 @@ function createDefaultAppHandle(): IAppHandle {
 
 export function AppProvider({
   children,
-  createAgentPlanId,
-  createAgentPlanner = createDefaultAgentPlanner,
   createAppHandle = createDefaultAppHandle,
 }: AppProviderProps) {
   const [runtime] = useState(() => {
     const app = createAppHandle();
-    const agentWorkflow = new AgentWorkflow({
-      commandExecutor: app.controller,
-      createPlanId: createAgentPlanId,
-      getSessionState: () => app.sessionReader.getState(),
-      planner: createAgentPlanner(),
-    });
 
-    return { agentWorkflow, app };
+    return { app };
   });
 
   useEffect(() => {
@@ -63,10 +50,6 @@ export function AppProvider({
 
 export function useAppController(): AppController {
   return useWebAppContext().app.controller;
-}
-
-export function useAgentWorkflow(): AgentWorkflow {
-  return useWebAppContext().agentWorkflow;
 }
 
 export function useSessionState(): WebSessionState {
