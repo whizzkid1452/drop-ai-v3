@@ -982,6 +982,13 @@ JSON-compatible `AgentPlanDraft`를 생성하는 실행 경로를 뜻한다. com
   - 3 files / 18 tests passed
 - `pnpm test:unit src/apps/web/AppProvider.test.tsx src/apps/web/agent/AgentPanel.test.tsx src/apps/web/App.test.tsx src/testing/architecture-boundary.test.ts`
   - 4 files / 18 tests passed
+- 최종 검증:
+  - `npx prettier --write .` -> changed files 없음
+  - `pnpm lint` -> passed
+  - `pnpm typecheck` -> passed
+  - `pnpm test` -> 43 files / 306 tests passed
+  - `pnpm build` -> passed
+  - Vite가 WebLLM dependency로 인해 500 kB 초과 chunk warning을 표시했다. 이 warning은 build failure가 아니다.
 
 ### 불확실성
 
