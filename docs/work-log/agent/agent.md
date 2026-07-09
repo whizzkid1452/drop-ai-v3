@@ -895,7 +895,8 @@ JSON-compatible `AgentPlanDraft`를 생성하는 실행 경로를 뜻한다. com
 - WebLLM chat completion 요청은 `response_format: { type: 'json_object' }`, `temperature: 0`, `max_tokens: 1000`을 사용한다.
 - planner prompt input은 `requestText`, `sessionSummary`, command catalog로 제한한다.
 - `requiresUserAttachment` command는 metadata만 전달하고 examples는 비워 `File` payload가 모델 입력에 들어가지 않도록 했다.
-- `createDefaultAgentPlanner()`는 설정이 없으면 기존 scripted planner를 유지한다.
+- `createDefaultAgentPlanner()`는 설정이 없으면 WebLLM planner를 사용한다.
+- `VITE_AGENT_PLANNER_PROVIDER=scripted`이면 deterministic scripted planner를 사용한다.
 - `VITE_AGENT_PLANNER_PROVIDER=webllm`이면 WebLLM planner를 사용한다.
 - `VITE_AGENT_PLANNER_PROVIDER=http`이면 `VITE_AGENT_PLANNER_ENDPOINT`를 요구한다.
 
@@ -905,7 +906,7 @@ JSON-compatible `AgentPlanDraft`를 생성하는 실행 경로를 뜻한다. com
   `AgentWorkflow.approvePlan()` 경계에 남아 있다.
 - WebLLM 응답을 `AgentPlanDraft`로만 파싱하고 command shape 검증은 `validateAgentPlanDraft()`에 맡겼기 때문에,
   모델 응답이 잘못된 command를 포함해도 preview 전에 plan validation failure로 분리될 수 있다.
-- default scripted fallback을 유지했기 때문에 WebGPU가 없는 환경에서도 기존 agent demo path는 유지된다.
+- scripted provider를 명시 설정할 수 있기 때문에 WebGPU가 없는 환경에서도 deterministic agent demo path는 유지된다.
 
 ### 불확실성
 
@@ -942,7 +943,7 @@ JSON-compatible `AgentPlanDraft`를 생성하는 실행 경로를 뜻한다. com
 
 - 장점:
   - 브라우저 안에서 private provider key 없이 자연어 planner를 실행할 수 있는 경로가 생겼다.
-  - default scripted planner가 유지되어 WebGPU가 없는 개발 환경도 깨지지 않는다.
+- scripted planner를 명시 선택할 수 있어 WebGPU가 없는 개발 환경에서도 deterministic demo path를 사용할 수 있다.
   - WebLLM과 HTTP provider가 같은 `IAgentPlanner` boundary를 공유한다.
 - 비용:
   - WebLLM dependency와 별도 dynamic chunk가 추가됐다.
@@ -972,7 +973,7 @@ JSON-compatible `AgentPlanDraft`를 생성하는 실행 경로를 뜻한다. com
 - `AgentWorkflow`는 planner draft를 바로 실행하지 않고, `commandSchema` 기반 검증을 통과한 plan만 preview한다.
 - 승인된 plan은 현재 session fingerprint를 다시 확인한 뒤 `AppController.executeCommand()`로 순차 실행한다.
 - `WebLLMAgentPlanner`는 WebLLM 응답을 `AgentPlanDraft` 후보로 변환하는 planner adapter다. command 실행 권한은 갖지 않는다.
-- Web path의 기본 provider는 `scripted`다. `VITE_AGENT_PLANNER_PROVIDER=webllm`일 때만 WebLLM planner를 사용한다.
+- Web path의 기본 provider는 `webllm`이다. `VITE_AGENT_PLANNER_PROVIDER=scripted`일 때만 deterministic scripted planner를 사용한다.
 
 ### 검증
 

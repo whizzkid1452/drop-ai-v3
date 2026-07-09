@@ -1,9 +1,10 @@
 # Phase 1 다음 구현 플랜
 
-> 2026-07-07 상태 업데이트: 이 문서는 Phase 1 planner provider 작업 전 작성한 계획이다. 현재 `main`에는
+> 2026-07-09 상태 업데이트: 이 문서는 Phase 1 planner provider 작업 전 작성한 계획이다. 현재 `main`에는
 > `HttpAgentPlanner`, `WebLLMAgentPlanner`, `VITE_AGENT_PLANNER_PROVIDER` 기반 provider selection이 들어가 있다.
-> 최신 구현 기록은 `docs/work-log/agent/agent.md`의 "WebLLM Agent Planner와 Provider Selection 연결" 섹션을 기준으로
-> 본다.
+> Web path의 기본 provider는 `webllm`이며, `scripted`는 명시 설정할 때만 사용하는 deterministic test/dev fallback이다.
+> 최신 구현 기록은 `docs/work-log/agent/agent.md`의 "WebLLM Agent Planner와 Provider Selection 연결" 섹션과
+> "2026-07-09 main 재적용 결과" 섹션을 기준으로 본다.
 
 ## 목적
 

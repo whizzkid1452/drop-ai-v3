@@ -195,7 +195,7 @@ function parseAgentPlannerProvider(
   const normalizedValue = trimEnvironmentValue(value).toLowerCase();
 
   if (!normalizedValue) {
-    return 'scripted';
+    return 'webllm';
   }
 
   if (

@@ -6,8 +6,16 @@ import { agentCommandCatalog } from '@/apps/agent/agent-command-catalog';
 import { createDefaultAgentPlanner } from './default-agent-planner';
 
 describe('createDefaultAgentPlanner', () => {
-  it('uses the scripted planner when no provider is configured', async () => {
+  it('uses the WebLLM planner when no provider is configured', () => {
     const planner = createDefaultAgentPlanner({ environment: {} });
+
+    expect(planner).toBeInstanceOf(WebLLMAgentPlanner);
+  });
+
+  it('uses the scripted planner when the scripted provider is configured', async () => {
+    const planner = createDefaultAgentPlanner({
+      environment: { VITE_AGENT_PLANNER_PROVIDER: 'scripted' },
+    });
 
     const draft = await planner.createPlan({
       commandCatalog: agentCommandCatalog,
