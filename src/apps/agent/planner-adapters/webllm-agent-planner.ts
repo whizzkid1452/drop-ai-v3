@@ -46,7 +46,6 @@ export interface WebLLMPlannerEngine {
 export interface WebLLMChatCompletionRequest {
   messages: WebLLMChatCompletionMessage[];
   max_tokens: number;
-  response_format: { type: 'json_object' };
   temperature: number;
 }
 
@@ -98,7 +97,6 @@ export class WebLLMAgentPlanner implements IAgentPlanner {
     const completion = await engine.chat.completions.create({
       max_tokens: this.maxTokens,
       messages: createWebLLMMessages(input),
-      response_format: { type: 'json_object' },
       temperature: this.temperature,
     });
     const content = completion.choices[0]?.message.content;

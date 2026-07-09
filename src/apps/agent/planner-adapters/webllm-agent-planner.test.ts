@@ -23,7 +23,7 @@ interface FakeWebLLMPlannerEngine extends WebLLMPlannerEngine {
 }
 
 describe('WebLLMAgentPlanner', () => {
-  it('requests a JSON chat completion and returns an agent plan draft', async () => {
+  it('requests a chat completion and returns an agent plan draft', async () => {
     const engine = createEngineReturning(
       JSON.stringify({
         steps: [
@@ -55,9 +55,9 @@ describe('WebLLMAgentPlanner', () => {
 
     expect(completionRequest).toMatchObject({
       max_tokens: 1000,
-      response_format: { type: 'json_object' },
       temperature: 0,
     });
+    expect('response_format' in completionRequest).toBe(false);
     expect(completionRequest.messages[0]).toMatchObject({
       role: 'system',
     });

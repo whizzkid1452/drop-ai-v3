@@ -892,7 +892,9 @@ JSON-compatible `AgentPlanDraft`를 생성하는 실행 경로를 뜻한다. com
 - `WebLLMAgentPlanner`는 `IAgentPlanner`를 구현한다.
 - WebLLM engine 생성은 `engineFactory`로 주입할 수 있어 단위 테스트에서 실제 모델을 로드하지 않는다.
 - 기본 engine factory는 `CreateMLCEngine(modelId, { initProgressCallback })`를 동적 import로 호출한다.
-- WebLLM chat completion 요청은 `response_format: { type: 'json_object' }`, `temperature: 0`, `max_tokens: 1000`을 사용한다.
+- WebLLM chat completion 요청은 `temperature: 0`, `max_tokens: 1000`을 사용한다.
+- WebLLM `response_format`은 사용하지 않는다. `@mlc-ai/web-llm@0.2.84`에서 `{ type: 'json_object' }`를 넘기면 JSON schema grammar compile 경로에서 `BindingError: Cannot pass non-string to std::string`이 발생할 수 있기 때문이다.
+- JSON plan 형식 요구는 system prompt에 넣고, 응답은 `parsePlanDraftContent()`와 기존 plan validation 경계에서 검증한다.
 - planner prompt input은 `requestText`, `sessionSummary`, command catalog로 제한한다.
 - `requiresUserAttachment` command는 metadata만 전달하고 examples는 비워 `File` payload가 모델 입력에 들어가지 않도록 했다.
 - `createDefaultAgentPlanner()`는 설정이 없으면 WebLLM planner를 사용한다.
