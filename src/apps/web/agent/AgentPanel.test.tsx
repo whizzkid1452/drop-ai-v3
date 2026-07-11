@@ -24,7 +24,7 @@ afterEach(() => {
 });
 
 describe('AgentPanel', () => {
-  it('previews a command plan and executes it after approval', async () => {
+  it('executes a command plan immediately when Enter submits the request', async () => {
     const { app, container } = renderAgentPanel({
       scripts: {
         'set range': {
@@ -50,21 +50,13 @@ describe('AgentPanel', () => {
       },
     });
 
-    await requestPlan(container, 'set range');
-
-    expect(getText(container, 'agent-plan-status')).toBe('Draft plan');
-    expect(getTexts(container, 'agent-plan-step-command')).toEqual([
-      'session.exportRange.start.set',
-      'session.exportRange.end.set',
-    ]);
-
-    await clickByTestId(container, 'agent-approve-plan');
+    await submitRequestWithEnter(container, 'set range');
 
     expect(app.sessionReader.getState().exportRange).toMatchObject({
       endSeconds: 3,
       startSeconds: 1,
     });
-    expect(getText(container, 'agent-execution-message')).toBe(
+    expect(getTexts(container, 'agent-message')).toContain(
       'Completed 2 commands.'
     );
   });
@@ -72,26 +64,26 @@ describe('AgentPanel', () => {
   it('shows validation errors without executing commands', async () => {
     const { app, container } = renderAgentPanel({ scripts: {} });
 
-    await requestPlan(container, 'unknown request');
+    await submitRequestWithEnter(container, 'unknown request');
 
-    expect(getText(container, 'agent-error')).toBe(
+    expect(getTexts(container, 'agent-message')).toContain(
       'Agent plan must include at least one step.'
     );
     expect(app.sessionReader.getState().playback.positionSeconds).toBe(0);
   });
 
-  it('shows planner failures and re-enables the plan control', async () => {
+  it('shows planner failures and re-enables the input', async () => {
     const { app, container } = renderAgentPanel({
       createAgentPlanner: createRejectingPlanner,
     });
 
-    await requestPlan(container, 'preview');
+    await submitRequestWithEnter(container, 'preview');
 
-    expect(getText(container, 'agent-error')).toBe(
+    expect(getTexts(container, 'agent-message')).toContain(
       'Agent planner failed to create a command plan.'
     );
     expect(app.sessionReader.getState().playback.positionSeconds).toBe(0);
-    expect(getButton(container, 'agent-request-plan').disabled).toBe(false);
+    expect(getTextArea(container, 'agent-request-input').disabled).toBe(false);
   });
 });
 
@@ -135,15 +127,11 @@ function createRejectingPlanner(): IAgentPlanner {
   };
 }
 
-async function requestPlan(
+async function submitRequestWithEnter(
   container: HTMLElement,
   requestText: string
 ): Promise<void> {
-  const input = queryByTestId(container, 'agent-request-input');
-
-  if (!(input instanceof HTMLTextAreaElement)) {
-    throw new Error('Could not find agent request input.');
-  }
+  const input = getTextArea(container, 'agent-request-input');
 
   await act(async () => {
     setTextAreaValue(input, requestText);
@@ -151,7 +139,12 @@ async function requestPlan(
     await flushMicrotasks();
   });
 
-  await clickByTestId(container, 'agent-request-plan');
+  await act(async () => {
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' })
+    );
+    await flushMicrotasks();
+  });
 }
 
 function setTextAreaValue(
@@ -171,22 +164,6 @@ function setTextAreaValue(
   valueSetter.call(input, requestText);
 }
 
-async function clickByTestId(
-  container: HTMLElement,
-  testId: string
-): Promise<void> {
-  const element = queryByTestId(container, testId);
-
-  if (!(element instanceof HTMLElement)) {
-    throw new Error(`Could not find clickable element "${testId}".`);
-  }
-
-  await act(async () => {
-    element.click();
-    await flushMicrotasks();
-  });
-}
-
 async function flushMicrotasks(): Promise<void> {
   for (let index = 0; index < 5; index += 1) {
     await Promise.resolve();
@@ -197,21 +174,14 @@ function queryByTestId(container: HTMLElement, testId: string): Element | null {
   return container.querySelector(`[data-testid="${testId}"]`);
 }
 
-function getText(container: HTMLElement, testId: string): string {
+function getTextArea(
+  container: HTMLElement,
+  testId: string
+): HTMLTextAreaElement {
   const element = queryByTestId(container, testId);
 
-  if (!element) {
-    throw new Error(`Could not find element with test id "${testId}".`);
-  }
-
-  return element.textContent ?? '';
-}
-
-function getButton(container: HTMLElement, testId: string): HTMLButtonElement {
-  const element = queryByTestId(container, testId);
-
-  if (!(element instanceof HTMLButtonElement)) {
-    throw new Error(`Could not find button with test id "${testId}".`);
+  if (!(element instanceof HTMLTextAreaElement)) {
+    throw new Error(`Could not find textarea with test id "${testId}".`);
   }
 
   return element;

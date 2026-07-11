@@ -9,6 +9,7 @@ import { ScriptedAgentPlanner } from '@/apps/agent/scripted-agent-planner';
 import { createTestIdGenerator } from '@/testing/id-generator';
 import {
   AppProvider,
+  useAgentChatWorkflow,
   useAgentWorkflow,
   useAppController,
   useSessionState,
@@ -159,6 +160,66 @@ describe('AppProvider', () => {
         plan: planResult.plan,
       });
       expect(executionResult.ok).toBe(true);
+    });
+
+    expect(app.sessionReader.getState().playback.positionSeconds).toBe(2);
+  });
+
+  it('provides an agent chat workflow that plans and executes in one call', async () => {
+    const app = createApp({
+      audioEngine: new FakeAudioEngine(),
+      idGenerator: createTestIdGenerator(),
+      sessionId: 'session-test',
+    });
+    const container = document.createElement('div');
+    let submitChatRequest: (() => Promise<void>) | null = null;
+
+    function Harness() {
+      const agentChatWorkflow = useAgentChatWorkflow();
+
+      submitChatRequest = async () => {
+        const result = await agentChatWorkflow.submit({ requestText: 'seek' });
+        expect(result.ok).toBe(true);
+      };
+
+      return <p data-testid="mounted">mounted</p>;
+    }
+
+    root = createRoot(container);
+    act(() => {
+      root?.render(
+        <AppProvider
+          createAgentPlanner={() =>
+            new ScriptedAgentPlanner({
+              scripts: {
+                seek: {
+                  steps: [
+                    {
+                      command: {
+                        type: 'playback.seek',
+                        payload: { seconds: 2 },
+                      },
+                      id: 'step-1',
+                      reason: 'Move the playhead.',
+                    },
+                  ],
+                },
+              },
+            })
+          }
+          createAppHandle={() => app}
+        >
+          <Harness />
+        </AppProvider>
+      );
+    });
+
+    await act(async () => {
+      if (!submitChatRequest) {
+        throw new Error('Agent chat workflow was not captured.');
+      }
+
+      await submitChatRequest();
     });
 
     expect(app.sessionReader.getState().playback.positionSeconds).toBe(2);

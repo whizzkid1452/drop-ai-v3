@@ -44,7 +44,7 @@ describe('App upload-first flow', () => {
     expect(queryByTestId(container, 'add-track')).toBeNull();
   });
 
-  it('registers the uploaded file and opens the CLI with an editable session', async () => {
+  it('registers the uploaded file and opens the DAW workspace with the right panel closed', async () => {
     const { app, container } = renderApp();
     const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
 
@@ -60,6 +60,25 @@ describe('App upload-first flow', () => {
         duration: 4,
       }
     );
+    expect(queryByTestId(container, 'transport-play')).not.toBeNull();
+    expect(queryByTestId(container, 'session-id')).not.toBeNull();
+    expect(queryByTestId(container, 'right-panel')).toBeNull();
+    expect(queryByTestId(container, 'cli-terminal')).toBeNull();
+  });
+
+  it('opens chat by default in the right panel and shows the CLI from the CLI tab', async () => {
+    const { container } = renderApp();
+    const file = new File(['audio'], 'loop.wav', { type: 'audio/wav' });
+
+    await uploadFile(container, file);
+    await clickByTestId(container, 'right-panel-open');
+
+    expect(queryByTestId(container, 'right-panel')).not.toBeNull();
+    expect(queryByTestId(container, 'agent-request-input')).not.toBeNull();
+    expect(queryByTestId(container, 'cli-terminal')).toBeNull();
+
+    await clickByTestId(container, 'right-panel-cli-tab');
+
     expect(getText(container, 'cli-terminal')).toContain('asset-1');
     expect(getText(container, 'cli-terminal')).toContain('track-1');
     expect(getText(container, 'cli-terminal')).toContain('region-1');

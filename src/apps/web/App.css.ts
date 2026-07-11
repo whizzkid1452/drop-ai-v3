@@ -120,6 +120,25 @@ export const layoutGrid = style({
   },
 });
 
+export const workspaceGrid = style({
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr)',
+  gap: vars.space.xl,
+  alignItems: 'start',
+});
+
+export const workspaceGridWithPanel = style({
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) minmax(320px, 420px)',
+  gap: vars.space.xl,
+  alignItems: 'start',
+  '@media': {
+    'screen and (max-width: 980px)': {
+      gridTemplateColumns: '1fr',
+    },
+  },
+});
+
 export const panel = style({
   border: `1px solid ${vars.color.border}`,
   borderRadius: vars.radius.panel,
@@ -138,6 +157,75 @@ export const terminalPanel = style([
     minWidth: 0,
   },
 ]);
+
+export const dawPanel = style({
+  display: 'grid',
+  minWidth: 0,
+  gap: vars.space.lg,
+});
+
+export const dawPanelHeader = style({
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: vars.space.md,
+});
+
+export const dawPanelGrid = style({
+  display: 'grid',
+  gridTemplateColumns: 'minmax(280px, 420px) minmax(0, 1fr)',
+  gap: vars.space.lg,
+  alignItems: 'start',
+  '@media': {
+    'screen and (max-width: 860px)': {
+      gridTemplateColumns: '1fr',
+    },
+  },
+});
+
+export const rightPanel = style({
+  display: 'grid',
+  minWidth: 0,
+  gap: vars.space.lg,
+});
+
+export const rightPanelHeader = style({
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: vars.space.md,
+});
+
+export const panelTabList = style({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: vars.space.sm,
+});
+
+export const panelTabButton = style({
+  minHeight: 40,
+  border: `1px solid ${vars.color.border}`,
+  borderRadius: vars.radius.control,
+  background: vars.color.panelRaised,
+  color: vars.color.text,
+  cursor: 'pointer',
+  fontWeight: 700,
+  selectors: {
+    '&:hover': {
+      borderColor: vars.color.accent,
+      background: vars.color.surfaceHighlight,
+    },
+    '&:focus-visible': {
+      outline: `2px solid ${vars.color.accentStrong}`,
+      outlineOffset: 3,
+    },
+    '&[aria-selected="true"]': {
+      borderColor: vars.color.accent,
+      background: vars.color.surfaceHighlight,
+      color: vars.color.accentStrong,
+    },
+  },
+});
 
 export const sectionTitle = style({
   margin: `0 0 ${vars.space.lg}`,
@@ -384,6 +472,49 @@ export const agentTextarea = style({
       outlineOffset: 3,
     },
   },
+});
+
+export const agentMessageList = style({
+  display: 'grid',
+  maxHeight: 320,
+  gap: vars.space.sm,
+  margin: 0,
+  overflowY: 'auto',
+  padding: 0,
+  listStyle: 'none',
+});
+
+export const agentMessage = style({
+  maxWidth: '88%',
+  border: `1px solid ${vars.color.border}`,
+  borderRadius: vars.radius.control,
+  padding: `${vars.space.sm} ${vars.space.md}`,
+  background: vars.color.panelRaised,
+  selectors: {
+    '&[data-message-tone="error"]': {
+      borderColor: vars.color.accentStrong,
+      color: vars.color.accentStrong,
+    },
+    '&[data-message-tone="success"]': {
+      borderColor: vars.color.accent,
+    },
+  },
+});
+
+export const agentMessageAssistant = style({
+  justifySelf: 'start',
+});
+
+export const agentMessageUser = style({
+  justifySelf: 'end',
+  background: vars.color.surfaceHighlight,
+});
+
+export const agentMessageText = style({
+  margin: 0,
+  overflowWrap: 'anywhere',
+  fontSize: 13,
+  lineHeight: 1.5,
 });
 
 export const agentStepList = style({

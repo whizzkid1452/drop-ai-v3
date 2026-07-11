@@ -7,6 +7,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
+import { AgentChatWorkflow } from '@/apps/agent/agent-chat-workflow';
 import { AgentWorkflow, type IAgentPlanner } from '@/apps/agent/agent-workflow';
 import { createApp, type IAppHandle } from '@/composition/create-app';
 import type { AppController } from '@/controllers/app-controller';
@@ -24,6 +25,7 @@ export interface AppProviderProps {
 }
 
 interface WebAppRuntime {
+  agentChatWorkflow: AgentChatWorkflow;
   agentWorkflow: AgentWorkflow;
   app: IAppHandle;
 }
@@ -48,8 +50,9 @@ export function AppProvider({
       getSessionState: () => app.sessionReader.getState(),
       planner: createAgentPlanner(),
     });
+    const agentChatWorkflow = new AgentChatWorkflow({ agentWorkflow });
 
-    return { agentWorkflow, app };
+    return { agentChatWorkflow, agentWorkflow, app };
   });
 
   useEffect(() => {
@@ -67,6 +70,10 @@ export function useAppController(): AppController {
 
 export function useAgentWorkflow(): AgentWorkflow {
   return useWebAppContext().agentWorkflow;
+}
+
+export function useAgentChatWorkflow(): AgentChatWorkflow {
+  return useWebAppContext().agentChatWorkflow;
 }
 
 export function useSessionState(): WebSessionState {

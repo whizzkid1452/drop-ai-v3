@@ -1,123 +1,110 @@
-import { useState } from 'react';
-import type {
-  ApproveAgentPlanResult,
-  RequestAgentPlanResult,
-} from '@/apps/agent/agent-workflow';
-import type { AgentCommandPlan } from '@/apps/agent/agent-plan';
-import type { CommandResult, SessionExportResult } from '@/controllers';
-import { useAgentWorkflow } from '../AppProvider';
+import { useRef, useState } from 'react';
+import type { SubmitAgentChatResult } from '@/apps/agent/agent-chat-workflow';
+import type { CommandResult } from '@/controllers';
+import { useAgentChatWorkflow } from '../AppProvider';
+import { downloadSessionExportResult } from '../cli/session-export-download';
 import * as styles from '../App.css';
 
-type AgentPendingAction = 'request' | 'approve' | 'reject';
+type AgentPendingAction = 'submit';
+type AgentMessageRole = 'assistant' | 'user';
+type AgentMessageTone = 'error' | 'neutral' | 'success';
+
+interface AgentChatMessage {
+  id: string;
+  role: AgentMessageRole;
+  text: string;
+  tone: AgentMessageTone;
+}
 
 export function AgentPanel() {
-  const agentWorkflow = useAgentWorkflow();
+  const agentChatWorkflow = useAgentChatWorkflow();
   const [requestText, setRequestText] = useState('');
-  const [plan, setPlan] = useState<AgentCommandPlan | null>(null);
+  const [messages, setMessages] = useState<AgentChatMessage[]>([
+    {
+      id: 'agent-message-initial',
+      role: 'assistant',
+      text: 'Ready.',
+      tone: 'neutral',
+    },
+  ]);
   const [pendingAction, setPendingAction] = useState<AgentPendingAction | null>(
     null
   );
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [executionMessage, setExecutionMessage] = useState<string | null>(null);
+  const nextMessageIdRef = useRef(0);
 
-  async function requestPlan(): Promise<void> {
+  async function submitRequest(): Promise<void> {
     const normalizedRequestText = requestText.trim();
-    if (!normalizedRequestText) {
-      setErrorMessage('Enter a request before creating a plan.');
+    if (!normalizedRequestText || pendingAction !== null) {
       return;
     }
 
-    setPendingAction('request');
-    setErrorMessage(null);
-    setExecutionMessage(null);
-    setPlan(null);
+    const userMessage = createMessage({
+      createId: createNextMessageId,
+      role: 'user',
+      text: normalizedRequestText,
+      tone: 'neutral',
+    });
+
+    setMessages((currentMessages) => [...currentMessages, userMessage]);
+    setRequestText('');
+    setPendingAction('submit');
 
     try {
-      const result = await agentWorkflow.requestPlan({
+      const result = await agentChatWorkflow.submit({
         requestText: normalizedRequestText,
       });
+      const assistantMessage = createAssistantMessage({
+        createId: createNextMessageId,
+        result,
+      });
 
-      applyPlanRequestResult(result);
+      setMessages((currentMessages) => [...currentMessages, assistantMessage]);
     } catch {
-      setErrorMessage('Agent planner failed to create a command plan.');
+      const assistantMessage = createMessage({
+        createId: createNextMessageId,
+        role: 'assistant',
+        text: 'Agent planner failed to run commands.',
+        tone: 'error',
+      });
+
+      setMessages((currentMessages) => [...currentMessages, assistantMessage]);
     } finally {
       setPendingAction(null);
     }
   }
 
-  function rejectPlan(): void {
-    if (!plan) {
-      return;
-    }
-
-    setPendingAction('reject');
-    const rejectedPlan = agentWorkflow.rejectPlan({ plan });
-    setPlan(rejectedPlan);
-    setExecutionMessage('Plan rejected.');
-    setErrorMessage(null);
-    setPendingAction(null);
+  function createNextMessageId(): string {
+    nextMessageIdRef.current += 1;
+    return `agent-message-${nextMessageIdRef.current}`;
   }
 
-  async function approvePlan(): Promise<void> {
-    if (!plan) {
-      return;
-    }
-
-    setPendingAction('approve');
-    setErrorMessage(null);
-    setExecutionMessage(null);
-
-    const result = await agentWorkflow.approvePlan({ plan });
-
-    setPendingAction(null);
-    applyPlanApprovalResult(result);
-  }
-
-  function applyPlanRequestResult(result: RequestAgentPlanResult): void {
-    if (!result.ok) {
-      setErrorMessage(result.errors.map((error) => error.message).join('\n'));
-      return;
-    }
-
-    setPlan(result.plan);
-  }
-
-  function applyPlanApprovalResult(result: ApproveAgentPlanResult): void {
-    setPlan(result.plan);
-
-    if (!result.ok) {
-      setErrorMessage(result.error.message);
-      return;
-    }
-
-    const downloadMessage = downloadExportResults(result.results);
-    const commandCount = result.results.length;
-    const completedMessage = `Completed ${commandCount} ${commandCount === 1 ? 'command' : 'commands'}.`;
-
-    setExecutionMessage(
-      downloadMessage
-        ? `${completedMessage} ${downloadMessage}`
-        : completedMessage
-    );
-  }
-
-  const hasDraftPlan = plan?.status === 'draft';
+  const isPending = pendingAction !== null;
 
   return (
-    <section className={styles.agentPanel} aria-label="Agent command planner">
+    <section className={styles.agentPanel} aria-label="Agent chat">
       <div className={styles.agentHeader}>
-        <h2 className={styles.sectionTitle}>Agent</h2>
-        {plan ? (
-          <p className={styles.agentStatus} data-testid="agent-plan-status">
-            {formatPlanStatus(plan.status)}
-          </p>
-        ) : null}
+        <h2 className={styles.sectionTitle}>Chat</h2>
+        <p className={styles.agentStatus} data-testid="agent-status">
+          {isPending ? 'Running' : 'Ready'}
+        </p>
       </div>
+      <ol className={styles.agentMessageList} data-testid="agent-messages">
+        {messages.map((message) => (
+          <li
+            className={`${styles.agentMessage} ${message.role === 'user' ? styles.agentMessageUser : styles.agentMessageAssistant}`}
+            data-message-tone={message.tone}
+            data-testid="agent-message"
+            key={message.id}
+          >
+            <p className={styles.agentMessageText}>{message.text}</p>
+          </li>
+        ))}
+      </ol>
       <form
         className={styles.agentForm}
         onSubmit={(event) => {
           event.preventDefault();
-          void requestPlan();
+          void submitRequest();
         }}
       >
         <label className={styles.agentInputLabel}>
@@ -126,176 +113,84 @@ export function AgentPanel() {
             aria-label="Agent request"
             className={styles.agentTextarea}
             data-testid="agent-request-input"
+            disabled={isPending}
             rows={3}
             value={requestText}
             onChange={(event) => setRequestText(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' || event.shiftKey) {
+                return;
+              }
+
+              event.preventDefault();
+              void submitRequest();
+            }}
           />
         </label>
         <button
           className={styles.primaryButton}
-          data-testid="agent-request-plan"
-          disabled={pendingAction !== null}
-          type="button"
-          onClick={() => void requestPlan()}
+          data-testid="agent-submit-request"
+          disabled={isPending || requestText.trim().length === 0}
+          type="submit"
         >
-          Plan
+          Run
         </button>
       </form>
-      {plan ? <AgentPlanPreview plan={plan} /> : null}
-      {hasDraftPlan ? (
-        <div className={styles.agentActionRow}>
-          <button
-            className={styles.primaryButton}
-            data-testid="agent-approve-plan"
-            disabled={pendingAction !== null}
-            type="button"
-            onClick={() => void approvePlan()}
-          >
-            Approve
-          </button>
-          <button
-            className={styles.secondaryButton}
-            data-testid="agent-reject-plan"
-            disabled={pendingAction !== null}
-            type="button"
-            onClick={rejectPlan}
-          >
-            Reject
-          </button>
-        </div>
-      ) : null}
-      {executionMessage ? (
-        <p
-          className={styles.commandMessage}
-          data-testid="agent-execution-message"
-        >
-          {executionMessage}
-        </p>
-      ) : null}
-      {errorMessage ? (
-        <p className={styles.transportError} data-testid="agent-error">
-          {errorMessage}
-        </p>
-      ) : null}
     </section>
   );
 }
 
-function AgentPlanPreview({ plan }: { plan: AgentCommandPlan }) {
-  return (
-    <ol className={styles.agentStepList} data-testid="agent-plan-steps">
-      {plan.steps.map((step) => (
-        <li className={styles.agentStep} key={step.id}>
-          <div className={styles.agentStepHeader}>
-            <strong
-              className={styles.agentStepCommand}
-              data-testid="agent-plan-step-command"
-            >
-              {step.command.type}
-            </strong>
-            <span className={styles.summaryLabel}>{step.id}</span>
-          </div>
-          <p className={styles.agentReason}>{step.reason}</p>
-          {hasPayload(step.command) ? (
-            <pre className={styles.agentPayload}>
-              {JSON.stringify(step.command.payload, null, 2)}
-            </pre>
-          ) : null}
-        </li>
-      ))}
-    </ol>
-  );
+function createAssistantMessage({
+  createId,
+  result,
+}: {
+  createId: () => string;
+  result: SubmitAgentChatResult;
+}): AgentChatMessage {
+  const downloadMessage = downloadExportResults(result.results);
+  const message = downloadMessage
+    ? `${result.message} ${downloadMessage}`
+    : result.message;
+
+  return createMessage({
+    createId,
+    role: 'assistant',
+    text: message,
+    tone: result.ok ? 'success' : 'error',
+  });
 }
 
-function formatPlanStatus(status: AgentCommandPlan['status']): string {
-  switch (status) {
-    case 'approved':
-      return 'Approved plan';
-    case 'completed':
-      return 'Completed plan';
-    case 'draft':
-      return 'Draft plan';
-    case 'executing':
-      return 'Executing plan';
-    case 'failed':
-      return 'Failed plan';
-    case 'rejected':
-      return 'Rejected plan';
-  }
-}
-
-function hasPayload(
-  command: AgentCommandPlan['steps'][number]['command']
-): command is AgentCommandPlan['steps'][number]['command'] & {
-  payload: unknown;
-} {
-  return 'payload' in command;
+function createMessage({
+  createId,
+  role,
+  text,
+  tone,
+}: {
+  createId: () => string;
+  role: AgentMessageRole;
+  text: string;
+  tone: AgentMessageTone;
+}): AgentChatMessage {
+  return {
+    id: createId(),
+    role,
+    text,
+    tone,
+  };
 }
 
 function downloadExportResults(results: CommandResult[]): string | null {
-  const exports = results
-    .map((result) => getSessionExportResult(result))
-    .filter((result): result is SessionExportResult => result !== null);
-
-  for (const result of exports) {
-    downloadSessionExportResult(result);
-  }
-
-  if (exports.length === 0) {
-    return null;
-  }
-
-  if (exports.length === 1) {
-    return `Download started: ${exports[0].filename}.`;
-  }
-
-  return `Downloads started: ${exports.length}.`;
-}
-
-function getSessionExportResult(
-  result: CommandResult
-): SessionExportResult | null {
-  if (!result.ok) {
-    return null;
-  }
-
-  if (
-    result.command.type !== 'session.export' &&
-    result.command.type !== 'session.exportRange.export'
-  ) {
-    return null;
-  }
-
-  if (!isSessionExportResult(result.data)) {
-    return null;
-  }
-
-  return result.data;
-}
-
-function downloadSessionExportResult(result: SessionExportResult): void {
-  const objectUrl = URL.createObjectURL(result.blob);
-  const anchor = document.createElement('a');
-
-  try {
-    anchor.href = objectUrl;
-    anchor.download = result.filename;
-    anchor.style.display = 'none';
-    document.body.append(anchor);
-    anchor.click();
-  } finally {
-    anchor.remove();
-    URL.revokeObjectURL(objectUrl);
-  }
-}
-
-function isSessionExportResult(value: unknown): value is SessionExportResult {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'blob' in value &&
-    value.blob instanceof Blob &&
-    'filename' in value &&
-    typeof value.filename === 'string'
+  const downloadedResults = results.filter((result) =>
+    downloadSessionExportResult(result)
   );
+
+  if (downloadedResults.length === 0) {
+    return null;
+  }
+
+  if (downloadedResults.length === 1) {
+    return 'Download started.';
+  }
+
+  return `Downloads started: ${downloadedResults.length}.`;
 }
